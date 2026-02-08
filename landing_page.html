@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<script type="module" src="/auth.js" defer></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verbose | Complexity, Articulated.</title>
+    
+    <style>
+        /* Lenis Base */
+        html.lenis, html.lenis body { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto !important; }
+
+        :root {
+            --bg: #ffffff;
+            --text: #1a1a1a;
+            --accent: #2563eb;
+            --secondary: #64748b;
+            --transition: cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Header & Hero */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 10%;
+            border-bottom: 1px solid #f1f5f9;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 100;
+        }
+
+        .logo { font-weight: 800; font-size: 1.5rem; letter-spacing: -1px; }
+
+        nav a { margin-right: 2rem; text-decoration: none; color: var(--secondary); font-weight: 500; }
+
+        .hero {
+            padding: 12rem 10%;
+            text-align: center;
+            background: linear-gradient(to bottom, #f8fafc, #ffffff);
+        }
+
+        h1 { font-size: clamp(2.5rem, 6vw, 4rem); margin-bottom: 1.5rem; line-height: 1.1; font-weight: 800; }
+
+        .btn {
+            background: var(--text);
+            color: white;
+            padding: 0.8rem 1.8rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* --- AUTH MODAL & ANIMATION --- */
+        #auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--text);
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.8s var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        #auth-overlay.active {
+            transform: translateY(0%);
+        }
+
+        .auth-container {
+            width: 90%;
+            max-width: 400px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease 0.6s;
+        }
+
+        #auth-overlay.active .auth-container {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .auth-card {
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            color: var(--text);
+        }
+
+        .auth-card h2 { margin-top: 0; letter-spacing: -1px; }
+
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            margin: 0.5rem 0 1.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .close-auth {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+        }
+
+        .auth-msg {
+            font-size: 0.85rem;
+            margin: 0 0 1rem;
+            min-height: 1.25rem;
+        }
+        .auth-msg.error { color: #dc2626; }
+        .auth-msg.success { color: #16a34a; }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            margin: 1.25rem 0;
+            color: var(--secondary);
+            font-size: 0.8rem;
+        }
+        .auth-divider::before, .auth-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        .auth-divider span { padding: 0 0.75rem; }
+
+        .btn-google {
+            width: 100%;
+            background: white;
+            color: var(--text);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-google:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .google-icon {
+            width: 18px;
+            height: 18px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%234285F4' d='M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z'/%3E%3Cpath fill='%2334A853' d='M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.16 7.09-10.27 7.09-17.65z'/%3E%3Cpath fill='%23FBBC05' d='M10.53 28.59c-.48-1.45-.76-3-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z'/%3E%3Cpath fill='%23EA4335' d='M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z'/%3E%3C/svg%3E") center/contain no-repeat;
+        }
+
+        /* Sections */
+        .features-section { padding: 10rem 10%; background: #fff; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2.5rem; margin-top: 3rem; }
+        .feature-card { padding: 3rem 2rem; border: 1px solid #e2e8f0; border-radius: 12px; }
+        footer { padding: 10rem 10%; background: #f8fafc; text-align: center; color: var(--secondary); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">VERBOSE</div>
+        <nav>
+            <a href="#features">Features</a>
+            <button class="btn" onclick="openAuth()">Get Started</button>
+        </nav>
+    </header>
+
+    <div id="auth-overlay">
+        <button class="close-auth" onclick="closeAuth()">Close [ESC]</button>
+        <div class="auth-container">
+            <div class="auth-card">
+                <!-- Sign In view -->
+                <div id="auth-signin-view">
+                    <h2>Welcome Back.</h2>
+                    <p style="color: var(--secondary); font-size: 0.9rem;">Enter your details to continue your narrative.</p>
+                    <p id="auth-msg" class="auth-msg" role="alert"></p>
+                    <form id="signin-form">
+                        <label for="signin-email">Email or username</label>
+                        <input id="signin-email" name="emailOrUsername" type="text" placeholder="Email or username" autocomplete="username email" required>
+                        <label for="signin-password">Password</label>
+                        <input id="signin-password" name="password" type="password" placeholder="••••••••" required>
+                        <button type="submit" class="btn" style="width: 100%;">Sign In</button>
+                    </form>
+                    <div class="auth-divider"><span>or</span></div>
+                    <button type="button" id="google-btn-signin" class="btn btn-google">
+                        <span class="google-icon"></span> Continue with Google
+                    </button>
+                    <p style="text-align: center; font-size: 0.8rem; margin-top: 2rem;">
+                        New here? <a href="#" id="switch-to-signup" style="color: var(--accent)">Create an account</a>
+                    </p>
+                </div>
+                <!-- Sign Up view -->
+                <div id="auth-signup-view" style="display: none;">
+                    <h2>Create Account.</h2>
+                    <p style="color: var(--secondary); font-size: 0.9rem;">Username and password, or sign up with Google.</p>
+                    <p id="auth-msg-signup" class="auth-msg" role="alert"></p>
+                    <form id="signup-form">
+                        <label for="signup-username">Username</label>
+                        <input id="signup-username" name="username" type="text" placeholder="Display name" autocomplete="username">
+                        <label for="signup-email">Email Address</label>
+                        <input id="signup-email" name="email" type="email" placeholder="name@domain.com" required>
+                        <label for="signup-password">Password</label>
+                        <input id="signup-password" name="password" type="password" placeholder="••••••••" minlength="6" required>
+                        <button type="submit" class="btn" style="width: 100%;">Sign Up</button>
+                    </form>
+                    <div class="auth-divider"><span>or</span></div>
+                    <button type="button" id="google-btn-signup" class="btn btn-google">
+                        <span class="google-icon"></span> Continue with Google
+                    </button>
+                    <p style="text-align: center; font-size: 0.8rem; margin-top: 2rem;">
+                        Already have an account? <a href="#" id="switch-to-signin" style="color: var(--accent)">Sign in</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <section class="hero">
+            <h1>Talk more, Miss Nothing</h1>
+            <p>Your ideas deserve space. Scroll down to see how we handle the details.</p>
+            <button class="btn" onclick="openAuth()">Get Started</button>
+        </section>
+
+        <section id="features" class="features-section">
+            <h2 style="text-align: center; font-size: 2.5rem;">Built for Depth</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>Infinite Canvas</h3>
+                    <p>No character limits. Whether it's 500 words or 50,000, our editor handles it with ease.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Rich Annotations</h3>
+                    <p>Support for footnotes and side-notes to keep your nuance intact.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Smart Indexing</h3>
+                    <p>Automatic table of contents generation based on your semantic heading structure.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 VERBOSE &mdash; Length is a Strength.</p>
+    </footer>
+
+    <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script> 
+
+    <script>
+        // Initialize Lenis
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            smooth: true,
+        });
+
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+
+        // Auth Toggle Logic (expose on window for auth.js module)
+        const overlay = document.getElementById('auth-overlay');
+
+        function openAuth() {
+            if (overlay) {
+                overlay.classList.add('active');
+                if (lenis) lenis.stop();
+            }
+        }
+
+        function closeAuth() {
+            if (overlay) {
+                overlay.classList.remove('active');
+                if (lenis) lenis.start();
+            }
+        }
+
+        window.openAuth = openAuth;
+        window.closeAuth = closeAuth;
+
+        // Close on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") closeAuth();
+        });
+
+        // Smooth scroll for anchors
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                lenis.scrollTo(this.getAttribute('href'));
+            });
+        });
+    </script>
+</body>
+</html>
