@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verbose</title>
+    
+    <style>
+        /* Lenis Base */
+        html.lenis, html.lenis body { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto !important; }
+
+        :root {
+            --bg: #ffffff;
+            --text: #1a1a1a;
+            --accent: #000000;
+            --secondary: #64748b;
+            --transition-ball: cubic-bezier(0.85, 0, 0.15, 1);
+            --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0; padding: 0;
+            overflow-x: hidden;
+            background: var(--bg);
+        }
+
+        /* Header */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 2rem 10%; border-bottom: 1px solid #f1f5f9;
+            position: sticky; top: 0; background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px); z-index: 100;
+        }
+
+        .logo { font-weight: 800; font-size: 1.5rem; letter-spacing: -1px; }
+        nav a { margin-right: 2rem; text-decoration: none; color: var(--secondary); font-weight: 500; }
+
+        .btn {
+            background: var(--text); color: white;
+            padding: 0.8rem 1.8rem; border-radius: 6px;
+            text-decoration: none; font-weight: 600;
+            display: inline-block; cursor: pointer; border: none;
+            transition: transform 0.3s var(--ease-out);
+        }
+        .btn:hover { transform: scale(1.05); }
+
+        /* --- CIRCULAR BALL EXPANSION OVERLAY --- */
+        #auth-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: var(--text);
+            z-index: 1000;
+            /* Start as a small circle at the button position (updated via JS) */
+            clip-path: circle(0% at var(--click-x, 50%) var(--click-y, 50%));
+            transition: clip-path 0.85s var(--transition-ball);
+            display: flex; justify-content: center; align-items: center;
+            pointer-events: none; /* Ignore clicks when hidden */
+        }
+
+        #auth-overlay.active {
+            clip-path: circle(150% at var(--click-x, 50%) var(--click-y, 50%));
+            pointer-events: all;
+        }
+
+        .auth-card {
+            background: white; padding: 3rem; border-radius: 12px;
+            color: var(--text); width: 90%; max-width: 400px;
+            opacity: 0; transform: scale(0.9);
+            transition: all 0.4s ease 0.5s; /* Wait for ball to fill screen */
+        }
+
+        #auth-overlay.active .auth-card { opacity: 1; transform: scale(1); }
+
+        #login-view, #signup-view {
+            animation: slideIn 0.4s var(--ease-out);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-card p a {
+            transition: all 0.3s var(--ease-out);
+            position: relative;
+            text-decoration: none;
+        }
+
+        .auth-card p a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--text);
+            transition: width 0.3s var(--ease-out);
+        }
+
+        .auth-card p a:hover::after {
+            width: 100%;
+        }
+
+        .auth-card .btn {
+            transition: all 0.3s var(--ease-out);
+        }
+
+        .auth-card form .btn:hover {
+            transform: scale(1.02) translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .auth-card form .btn:active {
+            transform: scale(0.98) translateY(0);
+        }
+
+        /* Auth UI Components */
+        .auth-card h2 { margin: 0 0 0.5rem; letter-spacing: -1px; }
+        .auth-card input {
+            width: 100%; padding: 0.8rem; margin-bottom: 1.2rem;
+            border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;
+            transition: all 0.3s var(--ease-out);
+            font-family: inherit; font-size: 0.95rem;
+        }
+        .auth-card input:focus {
+            outline: none;
+            border-color: var(--text);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .auth-card input::placeholder {
+            transition: color 0.3s ease;
+        }
+        .auth-card input:focus::placeholder {
+            color: transparent;
+        }
+        .auth-divider { display: flex; align-items: center; margin: 1.5rem 0; color: #94a3b8; font-size: 0.8rem; }
+        .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: #e2e8f0; }
+        .auth-divider span { padding: 0 10px; }
+
+        .btn-google {
+            width: 100%; background: white; color: var(--text); border: 1px solid #e2e8f0;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: all 0.3s var(--ease-out);
+        }
+        .btn-google:hover {
+            border-color: var(--text);
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .btn-google:active {
+            transform: translateY(0);
+        }
+
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.2rem;
+        }
+
+        .password-wrapper input {
+            margin-bottom: 0 !important;
+            flex: 1;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 0.8rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary);
+            transition: all 0.3s var(--ease-out);
+            font-size: 1.1rem;
+        }
+
+        .toggle-password:hover {
+            color: var(--text);
+            transform: scale(1.15);
+        }
+
+        .toggle-password:active {
+            transform: scale(0.95);
+        }
+
+        .close-auth {
+            position: absolute; top: 2rem; right: 2rem;
+            background: transparent; color: white; border: 2px solid white;
+            padding: 0.5rem 1.2rem; border-radius: 50px; cursor: pointer;
+            font-weight: 600; font-size: 0.9rem;
+            transition: all 0.3s var(--ease-out);
+        }
+
+        .close-auth:hover {
+            background: white;
+            color: var(--text);
+            transform: scale(1.1);
+        }
+
+        .close-auth:active {
+            transform: scale(0.95);
+        }
+
+        /* Hero & Features */
+        .hero { padding: 12rem 10%; text-align: center; background: linear-gradient(to bottom, #f8fafc, #ffffff); }
+        h1 { font-size: clamp(2.5rem, 6vw, 4rem); margin-bottom: 1.5rem; line-height: 1.1; font-weight: 800; }
+        .features-section { padding: 10rem 10%; background: #fff; perspective: 1000px; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2.5rem; margin-top: 3rem; }
+        
+        .feature-card {
+            position: relative;
+            padding: 3rem 2rem;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: white;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 1.2s var(--ease-out), transform 1.2s var(--ease-out), box-shadow 0.35s var(--ease-out);
+            will-change: transform, box-shadow;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            padding: 0;
+            z-index: 0;
+            pointer-events: none;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.18), 0 0 16px 4px rgba(0,0,0,0.13);
+            filter: blur(0px);
+            opacity: 1;
+        }
+        .feature-card > * {
+            position: relative;
+            z-index: 1;
+        }
+        .feature-card.revealed { opacity: 1; transform: translateY(0); }
+        .feature-card:hover {
+            transform: translateY(-12px) scale(1.045);
+            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.13), 0 0 0 3px rgba(108,99,255,0.10);
+        }
+
+        /* Electric border canvas overlay used on feature cards */
+        .electric-border-canvas {
+            position: absolute;
+            inset: -40px;
+            width: calc(100% + 80px);
+            height: calc(100% + 80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        footer { padding: 10rem 10%; background: #f8fafc; text-align: center; color: var(--secondary); }
+
+        /* Minimalist Stay Anonymous Button */
+        .stay-anon-minimal {
+            background: transparent;
+            color: var(--text);
+            border: 1.5px solid var(--text);
+            font-weight: 600;
+            width: 100%;
+            padding: 0.8rem 0;
+            border-radius: 8px;
+            box-shadow: none;
+            transition: background 0.3s var(--ease-out), color 0.3s var(--ease-out), transform 0.25s var(--ease-out);
+            position: relative;
+            overflow: hidden;
+        }
+        .stay-anon-minimal::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background: var(--text);
+            opacity: 0.08;
+            transform: scaleX(0);
+            transition: transform 0.3s var(--ease-out);
+            z-index: 0;
+        }
+        .stay-anon-minimal:hover::before {
+            transform: scaleX(1);
+        }
+        .stay-anon-minimal:hover {
+            background: rgba(0,0,0,0.03);
+            color: var(--accent);
+            transform: scale(1.04);
+        }
+        .stay-anon-minimal:active {
+            transform: scale(0.98);
+        }
+
+        #anon-go-btn {
+            width: 40%;
+            min-width: 100px;
+            max-width: 180px;
+            margin: 0 auto;
+            display: block;
+            border-radius: 24px;
+            padding: 0.7rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+        }
+        #anon-go-btn:hover {
+            background: #222;
+            color: #fff;
+            transform: scale(1.04);
+        }
+        #anon-go-btn:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">VERBOSE</div>
+        <nav>
+            <a href="#features">Features</a>
+            <button class="btn auth-trigger" onclick="openAuth(event)">Get Started</button>
+        </nav>
+    </header>
+
+    <div id="auth-overlay">
+        <button class="close-auth" onclick="closeAuth()">Close</button>
+        <div class="auth-card">
+            <div id="login-view">
+                <h2>Welcome back.</h2>
+                <p style="color: var(--secondary); font-size: 0.9rem; margin-bottom: 2rem;">Log in to your account.</p>
+                <form onsubmit="event.preventDefault()">
+                    <input type="email" placeholder="Email Address">
+                    <div class="password-wrapper">
+                        <input type="password" placeholder="Password" class="login-password">
+                        <button type="button" class="toggle-password" onclick="toggleLoginPassword()">👁️</button>
+                    </div>
+                    <button class="btn" style="width: 100%;">Continue</button>
+                </form>
+                <div style="margin: 1.5rem 0; text-align: center;">
+                    <button class="btn stay-anon-minimal" id="stay-anon-btn">Stay Anonymous</button>
+                </div>
+                <div id="anon-username-wrapper" style="display:none; margin-bottom:1rem; text-align:center;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; width:80%; margin:0 auto 0.7rem auto;">
+                        <input type="text" id="anon-username" placeholder="Choose a username" style="flex:1; padding:0.7rem; border-radius:6px; border:1px solid #e2e8f0;">
+                        <button type="button" id="dice-btn" style="background:transparent; border:none; cursor:pointer; font-size:1.4rem; padding:0 0.5rem; transition:transform 0.2s;">🎲</button>
+                    </div>
+                    <button class="btn" id="anon-go-btn">Go</button>
+                </div>
+                <div class="auth-divider"><span>or</span></div>
+                <button class="btn btn-google">Continue with Google</button>
+                <p style="text-align: center; font-size: 0.8rem; margin-top: 1.5rem;">
+                    Don't have an account? <a href="javascript:void(0)" onclick="toggleAuthView()" style="color: var(--text); font-weight: 600;">Sign up</a>
+                </p>
+            </div>
+            <div id="signup-view" style="display: none;">
+                <h2>Create account.</h2>
+                <p style="color: var(--secondary); font-size: 0.9rem; margin-bottom: 2rem;">Start your journey.</p>
+                <form onsubmit="event.preventDefault()">
+                    <input type="text" placeholder="Username">
+                    <input type="email" placeholder="Email">
+                    <div class="password-wrapper">
+                        <input type="password" placeholder="Password" class="signup-password">
+                        <button type="button" class="toggle-password" onclick="toggleSignupPassword()">👁️</button>
+                    </div>
+                    <button class="btn" style="width: 100%;">Create Account</button>
+                </form>
+                <p style="text-align: center; font-size: 0.8rem; margin-top: 1.5rem;">
+                    Already have an account? <a href="javascript:void(0)" onclick="toggleAuthView()" style="color: var(--text); font-weight: 600;">Log in</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <section class="hero">
+            <h1>Talk more, With Verbose</h1>
+            <p>Your ideas deserve space.</p>
+            <button class="btn auth-trigger" onclick="openAuth(event)">Get Started</button>
+        </section>
+
+        <section id="features" class="features-section">
+            <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 3rem;">Comes with</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div style="font-size:2.1rem; margin-bottom:1rem;">🔗</div>
+                    <h3 style="margin-bottom:0.5rem;">Instant Rooms</h3>
+                    <p style="color:#64748b;">Join conversations via link with no accounts required.</p>
+                </div>
+                <div class="feature-card">
+                    <div style="font-size:2.1rem; margin-bottom:1rem;">📁</div>
+                    <h3 style="margin-bottom:0.5rem;">Shared Drive</h3>
+                    <p style="color:#64748b;">Upload and access files within chat rooms.</p>
+                </div>
+                <div class="feature-card">
+                    <div style="font-size:2.1rem; margin-bottom:1rem;">🤖</div>
+                    <h3 style="margin-bottom:0.5rem;">Smart Chat AI</h3>
+                    <p style="color:#64748b;">Conversations are automatically organized into topics with summaries.</p>
+                </div>
+               
+            </div>
+        </section>
+    </main>
+
+    <footer><p>&copy; 2026 VERBOSE &mdash; Length is a Strength.</p></footer>
+
+    <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script> 
+    <script type="module">
+        import { signInWithGoogle } from './auth.js';
+        const lenis = new Lenis({ duration: 1.2, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smooth: true });
+        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+        requestAnimationFrame(raf);
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => entry.target.classList.add('revealed'), index * 150);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.feature-card').forEach(card => observer.observe(card));
+
+        // ---------- Electric border effect (ported from React component) ----------
+
+        const createElectricBorder = (element, {
+            color = '#5227FF',
+            speed = 1,
+            chaos = 0.12,
+            borderRadius = 24
+        } = {}) => {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'electric-border-canvas';
+            element.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            // Noise helpers
+            const random = (x) => {
+                return (Math.sin(x * 12.9898) * 43758.5453) % 1;
+            };
+
+            const noise2D = (x, y) => {
+                const i = Math.floor(x);
+                const j = Math.floor(y);
+                const fx = x - i;
+                const fy = y - j;
+
+                const a = random(i + j * 57);
+                const b = random(i + 1 + j * 57);
+                const c = random(i + (j + 1) * 57);
+                const d = random(i + 1 + (j + 1) * 57);
+
+                const ux = fx * fx * (3.0 - 2.0 * fx);
+                const uy = fy * fy * (3.0 - 2.0 * fy);
+
+                return a * (1 - ux) * (1 - uy) + b * ux * (1 - uy) + c * (1 - ux) * uy + d * ux * uy;
+            };
+
+            const octavedNoise = (x, octaves, lacunarity, gain, baseAmplitude, baseFrequency, time, seed, baseFlatness) => {
+                let y = 0;
+                let amplitude = baseAmplitude;
+                let frequency = baseFrequency;
+
+                for (let i = 0; i < octaves; i++) {
+                    let octaveAmplitude = amplitude;
+                    if (i === 0) octaveAmplitude *= baseFlatness;
+                    y += octaveAmplitude * noise2D(frequency * x + seed * 100, time * frequency * 0.3);
+                    frequency *= lacunarity;
+                    amplitude *= gain;
+                }
+
+                return y;
+            };
+
+            const getCornerPoint = (centerX, centerY, radius, startAngle, arcLength, progress) => {
+                const angle = startAngle + progress * arcLength;
+                return {
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle)
+                };
+            };
+
+            const getRoundedRectPoint = (t, left, top, width, height, radius) => {
+                const straightWidth = width - 2 * radius;
+                const straightHeight = height - 2 * radius;
+                const cornerArc = (Math.PI * radius) / 2;
+                const totalPerimeter = 2 * straightWidth + 2 * straightHeight + 4 * cornerArc;
+                const distance = t * totalPerimeter;
+
+                let accumulated = 0;
+
+                // Top edge
+                if (distance <= accumulated + straightWidth) {
+                    const progress = (distance - accumulated) / straightWidth;
+                    return { x: left + radius + progress * straightWidth, y: top };
+                }
+                accumulated += straightWidth;
+
+                // Top-right corner
+                if (distance <= accumulated + cornerArc) {
+                    const progress = (distance - accumulated) / cornerArc;
+                    return getCornerPoint(left + width - radius, top + radius, radius, -Math.PI / 2, Math.PI / 2, progress);
+                }
+                accumulated += cornerArc;
+
+                // Right edge
+                if (distance <= accumulated + straightHeight) {
+                    const progress = (distance - accumulated) / straightHeight;
+                    return { x: left + width, y: top + radius + progress * straightHeight };
+                }
+                accumulated += straightHeight;
+
+                // Bottom-right corner
+                if (distance <= accumulated + cornerArc) {
+                    const progress = (distance - accumulated) / cornerArc;
+                    return getCornerPoint(left + width - radius, top + height - radius, radius, 0, Math.PI / 2, progress);
+                }
+                accumulated += cornerArc;
+
+                // Bottom edge
+                if (distance <= accumulated + straightWidth) {
+                    const progress = (distance - accumulated) / straightWidth;
+                    return { x: left + width - radius - progress * straightWidth, y: top + height };
+                }
+                accumulated += straightWidth;
+
+                // Bottom-left corner
+                if (distance <= accumulated + cornerArc) {
+                    const progress = (distance - accumulated) / cornerArc;
+                    return getCornerPoint(left + radius, top + height - radius, radius, Math.PI / 2, Math.PI / 2, progress);
+                }
+                accumulated += cornerArc;
+
+                // Left edge
+                if (distance <= accumulated + straightHeight) {
+                    const progress = (distance - accumulated) / straightHeight;
+                    return { x: left, y: top + height - radius - progress * straightHeight };
+                }
+                accumulated += straightHeight;
+
+                // Top-left corner
+                const progress = (distance - accumulated) / cornerArc;
+                return getCornerPoint(left + radius, top + radius, radius, Math.PI, Math.PI / 2, progress);
+            };
+
+            // Configuration
+            const octaves = 10;
+            const lacunarity = 1.6;
+            const gain = 0.7;
+            const amplitude = chaos;
+            const frequency = 10;
+            const baseFlatness = 0;
+            const displacement = 30;
+            const borderOffset = 40;
+
+            let width = 0;
+            let height = 0;
+            let time = 0;
+            let lastFrameTime = performance.now();
+
+            const updateSize = () => {
+                const rect = element.getBoundingClientRect();
+                width = rect.width + borderOffset * 2;
+                height = rect.height + borderOffset * 2;
+
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+            };
+
+            updateSize();
+
+            const drawElectricBorder = (currentTime) => {
+                const deltaTime = (currentTime - lastFrameTime) / 1000;
+                time += deltaTime * speed;
+                lastFrameTime = currentTime;
+
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.scale(dpr, dpr);
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                const scale = displacement;
+                const left = borderOffset;
+                const top = borderOffset;
+                const borderWidth = width - 2 * borderOffset;
+                const borderHeight = height - 2 * borderOffset;
+                const maxRadius = Math.min(borderWidth, borderHeight) / 2;
+                const radius = Math.min(borderRadius, maxRadius);
+
+                const approximatePerimeter = 2 * (borderWidth + borderHeight) + 2 * Math.PI * radius;
+                const sampleCount = Math.floor(approximatePerimeter / 2);
+
+                ctx.beginPath();
+
+                for (let i = 0; i <= sampleCount; i++) {
+                    const progress = i / sampleCount;
+
+                    const point = getRoundedRectPoint(progress, left, top, borderWidth, borderHeight, radius);
+
+                    const xNoise = octavedNoise(
+                        progress * 8,
+                        octaves,
+                        lacunarity,
+                        gain,
+                        amplitude,
+                        frequency,
+                        time,
+                        0,
+                        baseFlatness
+                    );
+
+                    const yNoise = octavedNoise(
+                        progress * 8,
+                        octaves,
+                        lacunarity,
+                        gain,
+                        amplitude,
+                        frequency,
+                        time,
+                        1,
+                        baseFlatness
+                    );
+
+                    const displacedX = point.x + xNoise * scale;
+                    const displacedY = point.y + yNoise * scale;
+
+                    if (i === 0) {
+                        ctx.moveTo(displacedX, displacedY);
+                    } else {
+                        ctx.lineTo(displacedX, displacedY);
+                    }
+                }
+
+                ctx.closePath();
+                ctx.stroke();
+
+                requestAnimationFrame(drawElectricBorder);
+            };
+
+            const resizeObserver = new ResizeObserver(() => {
+                updateSize();
+            });
+            resizeObserver.observe(element);
+
+            requestAnimationFrame(drawElectricBorder);
+        };
+
+        // --- UPDATED AUTH BALL LOGIC ---
+        const overlay = document.getElementById('auth-overlay');
+
+        window.openAuth = function(event) {
+            // Get coordinates of the click or the button
+            const x = event.clientX || event.target.getBoundingClientRect().left + (event.target.offsetWidth / 2);
+            const y = event.clientY || event.target.getBoundingClientRect().top + (event.target.offsetHeight / 2);
+            
+            // Set the origin of the circle expansion
+            overlay.style.setProperty('--click-x', x + 'px');
+            overlay.style.setProperty('--click-y', y + 'px');
+            
+            overlay.classList.add('active');
+            lenis.stop();
+        };
+
+        window.closeAuth = function() {
+            overlay.classList.remove('active');
+            lenis.start();
+        };
+
+        window.toggleAuthView = function() {
+            const login = document.getElementById('login-view');
+            const signup = document.getElementById('signup-view');
+            
+            if (login.style.display === 'none') {
+                login.style.display = 'block';
+                signup.style.display = 'none';
+            } else {
+                login.style.display = 'none';
+                signup.style.display = 'block';
+            }
+            
+            // Re-trigger animation
+            const visible = login.style.display === 'block' ? login : signup;
+            visible.style.animation = 'none';
+            setTimeout(() => {
+                visible.style.animation = 'slideIn 0.4s var(--ease-out)';
+            }, 10);
+        };
+
+        window.toggleLoginPassword = function() {
+            const passwordInput = document.querySelector('.login-password');
+            const button = document.querySelector('#login-view .toggle-password');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                button.textContent = '👁️';
+            }
+        };
+
+        window.toggleSignupPassword = function() {
+            const passwordInput = document.querySelector('.signup-password');
+            const button = document.querySelector('#signup-view .toggle-password');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                button.textContent = '👁️';
+            }
+        };
+
+        // Google Sign-In Handler
+        document.querySelector('.btn-google').addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                await signInWithGoogle();
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+            }
+        });
+
+        document.querySelectorAll('.feature-card').forEach(card => {
+            // Attach electric border to each feature card
+            createElectricBorder(card, {
+                color: '#5227FF',
+                speed: 1,
+                chaos: 0.12,
+                borderRadius: 24
+            });
+
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width - 0.5) * 20;
+                const y = ((e.clientY - rect.top) / rect.height - 0.5) * -20;
+                card.style.transform = `perspective(1000px) rotateX(${y}deg) rotateY(${x}deg) scale3d(1.05, 1.05, 1.05)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            });
+        });
+
+        const stayAnonBtn = document.getElementById('stay-anon-btn');
+        const anonUsernameWrapper = document.getElementById('anon-username-wrapper');
+        const anonGoBtn = document.getElementById('anon-go-btn');
+        const anonUsernameInput = document.getElementById('anon-username');
+
+        if (stayAnonBtn) {
+            stayAnonBtn.addEventListener('click', () => {
+                anonUsernameWrapper.style.display = 'block';
+                stayAnonBtn.style.display = 'none';
+                anonUsernameInput.focus();
+            });
+        }
+        if (anonGoBtn) {
+            anonGoBtn.addEventListener('click', () => {
+                const username = anonUsernameInput.value.trim();
+                if (!username) {
+                    anonUsernameInput.style.borderColor = '#ef4444';
+                    anonUsernameInput.placeholder = 'Username required';
+                    return;
+                }
+                // Simulate opening home page (replace with actual navigation)
+                window.location.href = '/home?username=' + encodeURIComponent(username);
+            });
+        }
+
+        // Add minimalist animation to Stay Anonymous button
+        const stayAnonBtnMinimal = document.getElementById('stay-anon-btn');
+        if (stayAnonBtnMinimal) {
+            stayAnonBtnMinimal.addEventListener('mousedown', () => {
+                stayAnonBtnMinimal.style.transform = 'scale(0.98)';
+            });
+            stayAnonBtnMinimal.addEventListener('mouseup', () => {
+                stayAnonBtnMinimal.style.transform = 'scale(1.04)';
+            });
+            stayAnonBtnMinimal.addEventListener('mouseleave', () => {
+                stayAnonBtnMinimal.style.transform = 'scale(1)';
+            });
+        }
+
+        const diceBtn = document.getElementById('dice-btn');
+        if (diceBtn) {
+            diceBtn.addEventListener('click', () => {
+                const adjectives = ["Swift", "Silent", "Brave", "Clever", "Lucky", "Mighty", "Happy", "Fuzzy", "Cosmic", "Witty", "Chill", "Sunny", "Funky", "Nimble", "Jolly"];
+                const animals = ["Fox", "Panda", "Tiger", "Otter", "Wolf", "Falcon", "Bear", "Koala", "Hawk", "Lion", "Dolphin", "Eagle", "Moose", "Bison", "Penguin"];
+                const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+                const animal = animals[Math.floor(Math.random() * animals.length)];
+               
+                anonUsernameInput.value = `${adj}${animal}`;
+                anonUsernameInput.style.borderColor = '#e2e8f0';
+                anonUsernameInput.placeholder = 'Choose a username';
+            });
+        }
+    </script>
+</body>
+</html>
