@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@import "@jamsr-ui/theme/styles.css";
+@source "../node_modules/@jamsr-ui";
+
+@utility container {
+  @apply mx-auto w-full max-w-(--breakpoint-lg) px-4 lg:px-6;
+}
+
+.orb-container {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dark,
+[data-theme="dark"] {
+  --ui-background: #060010;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+}

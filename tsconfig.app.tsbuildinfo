@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/decryptedtext.tsx","./src/components/gooeynav.tsx","./src/components/logo.tsx","./src/components/orb.tsx","./src/components/spotlightcard.tsx","./src/providers/app.tsx"],"errors":true,"version":"5.9.3"}
