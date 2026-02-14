@@ -4,7 +4,7 @@ import { Logo } from './Logo';
 import FloatingLines from './FloatingLines';
 import './LoginPage.css';
 
-type AuthMode = 'signin' | 'signup' | 'anonymous';
+type AuthMode = 'signin' | 'signup' | 'anonymous' | 'forgot';
 
 interface FormErrors {
   email?: string;
@@ -20,7 +20,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) => {
-  const { signIn, signUp, signInGoogle, signInGitHub, signInAsAnonymous, loading } = useAuth();
+  const { signIn, signUp, signInGoogle, signInGitHub, signInAsAnonymous, resetPassword, loading } = useAuth();
   
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
@@ -55,7 +55,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (mode === 'signin' || mode === 'signup') {
+    if (mode === 'signin') {
+      if (!username) {
+        newErrors.username = 'Username is required';
+      } else if (username.length < 3) {
+        newErrors.username = 'Username must be at least 3 characters';
+      }
+
+      if (!password) {
+        newErrors.password = 'Password is required';
+      }
+    }
+
+    if (mode === 'signup') {
       if (!email) {
         newErrors.email = 'Email is required';
       } else if (!validateEmail(email)) {
@@ -64,15 +76,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
 
       if (!password) {
         newErrors.password = 'Password is required';
-      } else if (mode === 'signup') {
+      } else {
         const passwordError = validatePassword(password);
         if (passwordError) {
           newErrors.password = passwordError;
         }
       }
-    }
 
-    if (mode === 'signup') {
       if (!confirmPassword) {
         newErrors.confirmPassword = 'Please confirm your password';
       } else if (password !== confirmPassword) {
@@ -88,6 +98,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
       }
     }
 
+    if (mode === 'forgot') {
+      if (!email) {
+        newErrors.email = 'Email is required';
+      } else if (!validateEmail(email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -100,7 +118,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
     setErrors({});
 
     try {
-      await signIn(email, password);
+      await signIn(username, password);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
       setErrors({ general: errorMessage });
@@ -163,6 +181,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
       await signInAsAnonymous();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to continue as guest';
+      setErrors({ general: errorMessage });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      await resetPassword(email);
+      setSuccessMessage('Password reset email sent! Check your inbox.');
+      setEmail('');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send reset email';
       setErrors({ general: errorMessage });
     } finally {
       setIsSubmitting(false);
@@ -285,17 +322,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
           {mode === 'signin' && (
             <form onSubmit={handleSignIn} className="login-form">
               <div className="form-group">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="signin-username">Username</label>
                 <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className={errors.email ? 'error' : ''}
+                  type="text"
+                  id="signin-username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  className={errors.username ? 'error' : ''}
                   disabled={isSubmitting}
                 />
-                {errors.email && <span className="field-error">{errors.email}</span>}
+                {errors.username && <span className="field-error">{errors.username}</span>}
               </div>
 
               <div className="form-group">
@@ -310,6 +347,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
                   disabled={isSubmitting}
                 />
                 {errors.password && <span className="field-error">{errors.password}</span>}
+                <button
+                  type="button"
+                  className="forgot-password-link"
+                  onClick={() => switchMode('forgot')}
+                >
+                  Forgot password?
+                </button>
               </div>
 
               <button
@@ -501,6 +545,51 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
                 </button>
               </p>
             </div>
+          )}
+
+          {/* Forgot Password Form */}
+          {mode === 'forgot' && (
+            <form onSubmit={handleForgotPassword} className="login-form">
+              <div className="forgot-password-info">
+                <div className="forgot-password-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+                <h3>Reset Your Password</h3>
+                <p>Enter your email address and we'll send you a link to reset your password.</p>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="forgot-email">Email</label>
+                <input
+                  type="email"
+                  id="forgot-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className={errors.email ? 'error' : ''}
+                  disabled={isSubmitting}
+                />
+                {errors.email && <span className="field-error">{errors.email}</span>}
+              </div>
+
+              <button
+                type="submit"
+                className="login-submit-btn"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Sending...' : 'Send Reset Link'}
+              </button>
+
+              <p className="login-switch">
+                Remember your password?{' '}
+                <button type="button" onClick={() => switchMode('signin')}>
+                  Sign in
+                </button>
+              </p>
+            </form>
           )}
         </div>
       </div>

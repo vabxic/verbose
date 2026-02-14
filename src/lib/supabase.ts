@@ -59,12 +59,18 @@ export const signUpWithEmail = async (
 };
 
 export const signInWithEmail = async (email: string, password: string) => {
+  console.log('signInWithEmail called with:', email);
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (error) throw error;
+  console.log('signInWithPassword result - data:', data, 'error:', error);
+
+  if (error) {
+    console.error('Auth error:', error.message);
+    throw error;
+  }
   return data;
 };
 
@@ -130,6 +136,51 @@ export const updateUserProfile = async (
     .eq('id', userId)
     .select()
     .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Get email by username for sign-in (uses secure database function)
+export const getEmailByUsername = async (username: string): Promise<string | null> => {
+  console.log('Looking up email for username:', username);
+  
+  const { data, error } = await supabase
+    .rpc('get_email_by_username', { lookup_username: username });
+
+  console.log('RPC result - data:', data, 'error:', error);
+
+  if (error) {
+    console.error('Error looking up email by username:', error);
+    return null;
+  }
+  return data ?? null;
+};
+
+// Sign in with username and password
+export const signInWithUsername = async (username: string, password: string) => {
+  console.log('signInWithUsername called for:', username);
+  
+  // First, look up the email by username
+  const email = await getEmailByUsername(username);
+  console.log('Found email:', email);
+  
+  if (!email) {
+    throw new Error('Username not found');
+  }
+  
+  // Then sign in with the email
+  console.log('Attempting signInWithEmail...');
+  const result = await signInWithEmail(email, password);
+  console.log('signInWithEmail result:', result);
+  return result;
+};
+
+// Send password reset email
+export const resetPassword = async (email: string) => {
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
 
   if (error) throw error;
   return data;

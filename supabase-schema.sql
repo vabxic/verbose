@@ -83,3 +83,21 @@ CREATE INDEX IF NOT EXISTS profiles_username_idx ON public.profiles(username);
 
 -- Create index for email lookups
 CREATE INDEX IF NOT EXISTS profiles_email_idx ON public.profiles(email);
+
+-- Create a secure function to get email by username (for login)
+-- Uses SECURITY DEFINER to bypass RLS
+CREATE OR REPLACE FUNCTION public.get_email_by_username(lookup_username TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  user_email TEXT;
+BEGIN
+  SELECT email INTO user_email
+  FROM public.profiles
+  WHERE username = lookup_username;
+  
+  RETURN user_email;
+END;
+$$;

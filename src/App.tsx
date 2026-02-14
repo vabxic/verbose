@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Button, Header, Text } from "@jamsr-ui/react";
-import FloatingLines from "./components/FloatingLines";
+const FloatingLines = lazy(() => import("./components/FloatingLines"));
 import { Logo } from "./components/Logo";
 import DecryptedText from "./components/DecryptedText";
 import GooeyNav from "./components/GooeyNav";
-import LoginPage from "./components/LoginPage";
-import HomePage from "./components/HomePage";
+const LoginPage = lazy(() => import("./components/LoginPage"));
+const HomePage = lazy(() => import("./components/HomePage"));
 import { useAuth } from "./providers/auth";
 
 function App() {
@@ -33,12 +33,20 @@ function App() {
 
   // Show login page when user clicks Get Started
   if (showLogin && !user) {
-    return <LoginPage onBack={() => setShowLogin(false)} />;
+    return (
+      <Suspense fallback={null}>
+        <LoginPage onBack={() => setShowLogin(false)} />
+      </Suspense>
+    );
   }
 
   // Show homepage if authenticated
   if (user) {
-    return <HomePage />;
+    return (
+      <Suspense fallback={null}>
+        <HomePage />
+      </Suspense>
+    );
   }
 
   // Show landing page for unauthenticated users
@@ -61,6 +69,7 @@ function App() {
       </div>
 
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <Suspense fallback={null}>
         <FloatingLines
           enabledWaves={["top", "middle", "bottom"]}
           lineCount={5}
@@ -71,6 +80,7 @@ function App() {
           parallax={true}
           mixBlendMode="screen"
         />
+        </Suspense>
       </div>
 
       <div className="absolute top-0 left-0 flex items-center justify-center flex-col w-full h-full z-1 pointer-events-none text-center">

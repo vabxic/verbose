@@ -2,13 +2,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import {
   supabase,
-  signInWithEmail,
+  signInWithUsername,
   signUpWithEmail,
   signInWithGoogle,
   signInWithGitHub,
   signInAnonymously,
   signOut as supabaseSignOut,
   getUserProfile,
+  resetPassword as supabaseResetPassword,
 } from '../lib/supabase';
 import type { UserProfile } from '../lib/supabase';
 
@@ -18,13 +19,14 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   isAnonymous: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (username: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username?: string, fullName?: string) => Promise<void>;
   signInGoogle: () => Promise<void>;
   signInGitHub: () => Promise<void>;
   signInAsAnonymous: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -147,12 +149,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (username: string, password: string) => {
     setLoading(true);
     try {
-      await signInWithEmail(email, password);
-    } finally {
+      await signInWithUsername(username, password);
+      // Don't set loading=false here - let onAuthStateChange handle it
+      // This prevents a race condition where loading=false but user is still null
+    } catch (err) {
       setLoading(false);
+      throw err;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      await supabaseResetPassword(email);
+    } catch (err) {
+      console.error('Password reset failed:', err);
+      throw err;
     }
   };
 
@@ -193,9 +207,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInAsAnonymous = async () => {
     setLoading(true);
     try {
-      await signInAnonymously();
-    } finally {
+      // Add a timeout to avoid hanging if the auth call stalls
+      const anonPromise = signInAnonymously();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Anonymous sign-in timed out')), 12000)
+      );
+
+      await Promise.race([anonPromise, timeoutPromise]);
+      // Don't set loading=false here - let onAuthStateChange handle it
+    } catch (err) {
+      console.error('Anonymous sign-in failed:', err);
       setLoading(false);
+      throw err;
     }
   };
 
@@ -224,6 +247,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signInAsAnonymous,
     signOut,
     refreshProfile,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

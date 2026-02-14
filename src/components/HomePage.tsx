@@ -3,7 +3,7 @@ import { useAuth } from '../providers/auth';
 import { Logo } from './Logo';
 import ProfileAvatar from './ProfileAvatar';
 import LoginPage from './LoginPage';
-import FloatingLines from './FloatingLines';
+import Aurora from './Aurora';
 import './HomePage.css';
 
 export const HomePage: React.FC = () => {
@@ -27,21 +27,8 @@ export const HomePage: React.FC = () => {
       user?.email?.split('@')[0] ||
       'User';
 
-  const background = useMemo(
-    () => (
-      <FloatingLines
-        enabledWaves={["top", "middle", "bottom"]}
-        lineCount={5}
-        lineDistance={5}
-        bendRadius={5}
-        bendStrength={-0.5}
-        interactive={true}
-        parallax={true}
-        mixBlendMode="screen"
-      />
-    ),
-    []
-  );
+  // Aurora color palette matches FloatingLines: pink, blue, violet
+  const auroraPalette = ["#E947F5", "#2F4BA2", "#7C5BFF"];
 
   // Show login page for account upgrade
   if (showLoginUpgrade) {
@@ -51,7 +38,9 @@ export const HomePage: React.FC = () => {
   return (
     <div className="home-page">
       {/* Background */}
-      <div className="home-background">{background}</div>
+      <div className="home-background">
+        <Aurora colorStops={auroraPalette} amplitude={1.0} blend={0.5} speed={1} />
+      </div>
 
       {/* Top bar */}
       <header className="home-header">
