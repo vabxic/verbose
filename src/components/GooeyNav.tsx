@@ -110,11 +110,27 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, index: number) => {
-    const liEl = e.currentTarget;
-    if (activeIndex === index) return;
+    // prevent anchor navigation interfering with the effect
+    e.preventDefault();
+    const anchor = e.currentTarget as HTMLElement;
+    const liEl = (anchor.closest('li') as HTMLElement) || anchor;
+    // activate the effect for the target element
+    activate(liEl, index);
+  };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const anchor = e.currentTarget as HTMLElement;
+      const liEl = (anchor.closest('li') as HTMLElement) || anchor;
+      activate(liEl, index);
+    }
+  };
+
+  const activate = (element: HTMLElement, index: number) => {
+    if (activeIndex === index) return;
     setActiveIndex(index);
-    updateEffectPosition(liEl);
+    updateEffectPosition(element);
 
     if (filterRef.current) {
       const particles = filterRef.current.querySelectorAll('.particle');
@@ -123,28 +139,12 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
 
     if (textRef.current) {
       textRef.current.classList.remove('active');
-
       void textRef.current.offsetWidth;
       textRef.current.classList.add('active');
     }
 
     if (filterRef.current) {
       makeParticles(filterRef.current);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      const liEl = e.currentTarget.parentElement;
-      if (liEl) {
-        handleClick(
-          {
-            currentTarget: liEl
-          } as React.MouseEvent<HTMLAnchorElement>,
-          index
-        );
-      }
     }
   };
 

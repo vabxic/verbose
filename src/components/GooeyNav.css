@@ -66,7 +66,7 @@
   padding: 0.6em 1em;
 }
 
-.gooey-nav-container nav ul li:focus-within:has(:focus-visible) {
+.gooey-nav-container nav ul li:focus-within {
   box-shadow: 0 0 0.5px 1.5px white;
 }
 
@@ -74,11 +74,11 @@
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 10px;
+  border-radius: 100vw;
   background: white;
   opacity: 0;
   transform: scale(0);
-  transition: all 0.3s ease;
+  transition: transform 520ms var(--linear-ease, ease), opacity 520ms var(--linear-ease, ease);
   z-index: -1;
 }
 
@@ -115,8 +115,12 @@
 }
 
 .gooey-nav-container .effect.filter {
-  filter: blur(7px) contrast(100) blur(0);
+  /* Remove heavy blur so the animated pill renders crisp */
+  filter: contrast(100%);
   mix-blend-mode: lighten;
+  /* promote to its own layer for smoother, non-blurry transforms */
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .gooey-nav-container .effect.filter::before {
@@ -138,25 +142,20 @@
   border-radius: 100vw;
 }
 
-.gooey-nav-container .effect.active::after {
-  animation: pill 0.3s ease both;
-}
-
-@keyframes pill {
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.particle,
-.point {
-  display: block;
+.gooey-nav-container .effect.filter::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: white;
+  transform: scale(0);
   opacity: 0;
-  width: 20px;
-  height: 20px;
-  border-radius: 100%;
-  transform-origin: center;
+  z-index: -1;
+  border-radius: 100vw;
+  transition: transform 520ms var(--linear-ease, ease), opacity 520ms var(--linear-ease, ease);
+}
+.gooey-nav-container .effect.active::after {
+  transform: scale(1);
+  opacity: 1;
 }
 
 .particle {

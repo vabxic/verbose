@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;600&display=swap');
 
 @import "tailwindcss";
 
@@ -28,8 +28,8 @@ body {
 
 /* Hero title font + aesthetics */
 .hero-title {
-  font-family: 'Playfair Display', 'Georgia', serif;
-  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
   font-size: clamp(1.6rem, 4vw, 2.8rem);
   letter-spacing: -0.01em;
   line-height: 1.02;
@@ -49,4 +49,83 @@ body {
 .hero-encrypted {
   color: rgba(255,255,255,0.45);
   filter: blur(0.6px);
+}
+
+/* Responsive utility fixes */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+}
+
+.container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.hero-title {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: clamp(1.2rem, 7vw, 1.8rem);
+    line-height: 1.05;
+  }
+
+  .hero-encrypted {
+    filter: blur(0.4px);
+  }
+
+  .hero-char {
+    letter-spacing: 0;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hero-title {
+    font-size: clamp(1.4rem, 5vw, 2.4rem);
+  }
+}
+
+/* Navbar logo font */
+.logo-text {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+}
+
+/* Translucent navbar/header styles (covers common header selectors) */
+header,
+.header,
+.site-header,
+[data-component="Header"],
+.jamsr-header,
+[role="banner"] {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(8px) saturate(1.12);
+  -webkit-backdrop-filter: blur(8px) saturate(1.12);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  z-index: 20;
+}
+
+/* Slight elevation/inner glow to make navbar read over the background */
+.header *, header * {
+  color: inherit;
 }
