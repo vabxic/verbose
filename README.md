@@ -1,24 +1,80 @@
-# Verbose 
+# Verbose
 
-This project is a small React + TypeScript + Vite app that showcases a glowing orb background, a gooey navigation menu, and an animated "decrypted" hero title:
+A modern real-time communication platform built with React, TypeScript, and Supabase. Features a sleek dark glass-morphism UI with animated backgrounds and comprehensive authentication.
 
-- Orb background with hover/rotation effects (three‑dimensional feel)
-- Gooey navigation bar with particle transitions between items
-- Decrypted text animation for the main headline
-- UI components built on `@jamsr-ui/react` and Tailwind CSS
+![React](https://img.shields.io/badge/React-19.1.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue) ![Supabase](https://img.shields.io/badge/Supabase-Auth-green) ![Vite](https://img.shields.io/badge/Vite-5.4-purple)
 
-Use it as a landing hero, background experiment, or as a starting point for more complex UIs.
+---
+
+## Features
+
+### Authentication
+- **Email/Password** — Sign up and sign in with email
+- **Google OAuth** — One-click Google sign-in
+- **GitHub OAuth** — One-click GitHub sign-in
+- **Anonymous/Guest Mode** — Browse and chat without an account
+
+### User Experience
+- **Dark Glass-morphism UI** — Modern frosted glass aesthetic
+- **Animated Background** — Interactive Three.js shader-based floating lines
+- **Decrypted Text Animation** — Smooth character-by-character text reveal
+- **Gooey Navigation** — Fluid particle-based navigation effects
+- **Profile Avatar** — User profile with dropdown menu showing avatar from OAuth provider
+
+### Access Control
+- **Chat** — Available to all users (including guests)
+- **Voice/Video Calls** — Requires authenticated account (guests prompted to sign up)
+- **Profile Management** — Full profile editing for registered users
 
 ---
 
 ## Tech Stack
 
-- React 19 + React DOM
-- TypeScript
-- Vite 5
-- Tailwind CSS 4 (via `@tailwindcss/postcss`)
-- `@jamsr-ui/react` for buttons, header, and typography
-- `motion` and `ogl` for visual/orb effects
+| Category | Technology |
+|----------|------------|
+| **Framework** | React 19.1.1 |
+| **Language** | TypeScript 5.5 |
+| **Build Tool** | Vite 5.4.2 |
+| **Styling** | TailwindCSS 4.1.12 |
+| **UI Components** | @jamsr-ui/react |
+| **Authentication** | Supabase Auth |
+| **Database** | Supabase (PostgreSQL) |
+| **Routing** | React Router DOM 7.13 |
+| **Animations** | Motion (Framer Motion), Three.js |
+| **3D/Graphics** | Three.js, OGL |
+
+---
+
+## Project Structure
+
+```
+verbose/
+├── public/                    # Static assets
+├── src/
+│   ├── assets/               # Images and media
+│   ├── components/
+│   │   ├── AuthCallback.tsx  # OAuth callback handler
+│   │   ├── DecryptedText.tsx # Animated text reveal component
+│   │   ├── FloatingLines.tsx # Three.js shader background
+│   │   ├── GlassSurface.tsx  # Glass-morphism container
+│   │   ├── GooeyNav.tsx      # Particle navigation component
+│   │   ├── HomePage.tsx      # Main dashboard after login
+│   │   ├── LoginPage.tsx     # Authentication UI
+│   │   ├── Logo.tsx          # Brand logo component
+│   │   └── ProfileAvatar.tsx # User avatar with dropdown
+│   ├── lib/
+│   │   └── supabase.ts       # Supabase client & auth helpers
+│   ├── providers/
+│   │   ├── app.tsx           # UI theme provider
+│   │   └── auth.tsx          # Authentication context
+│   ├── App.tsx               # Main app component
+│   ├── main.tsx              # Entry point with routing
+│   └── index.css             # Global styles
+├── supabase-schema.sql       # Database schema
+├── .env.example              # Environment variables template
+├── vite.config.ts            # Vite configuration
+└── package.json
+```
 
 ---
 
@@ -26,131 +82,295 @@ Use it as a landing hero, background experiment, or as a starting point for more
 
 ### Prerequisites
 
-- Node.js **18+** (recommended for Vite 5)
-- A package manager:
-  - Recommended: **pnpm** (a `pnpm-lock.yaml` is included)
-  - Also works with npm or yarn (adjust commands accordingly)
+- Node.js 18+ 
+- npm or pnpm
+- Supabase account
 
-### Install Dependencies
+### Installation
 
-Using **pnpm** (recommended):
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/verbose.git
+   cd verbose
+   ```
 
-```bash
-pnpm install
-```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Using **npm**:
+3. **Set up environment variables**
+   
+   Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Fill in your Supabase credentials:
+   ```env
+   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-```bash
-npm install
-```
+4. **Set up the database**
+   
+   Run the SQL schema in your Supabase SQL Editor:
+   - Go to your Supabase Dashboard → SQL Editor
+   - Copy and paste the contents of `supabase-schema.sql`
+   - Execute the query
 
-Using **yarn**:
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-```bash
-yarn install
-```
-
-### Run the Development Server
-
-```bash
-pnpm dev
-```
-
-Then open the printed URL (by default `http://localhost:5173`) in your browser.
-
-### Build for Production
-
-```bash
-pnpm build
-```
-
-This runs TypeScript checks (`tsc -b`) and then creates an optimized production build in the `dist` folder.
-
-### Preview the Production Build
-
-```bash
-pnpm preview
-```
-
-This serves the contents of `dist` with Vite's preview server.
-
-### Lint the Code
-
-```bash
-pnpm lint
-```
-
-This runs ESLint on the project.
+   The app will be available at `http://localhost:5173`
 
 ---
 
-## Project Structure (Relevant Parts)
+## Supabase Configuration
 
-- `src/main.tsx` – React entry point that mounts the app
-- `src/App.tsx` – Main layout: header, gooey nav, orb background, hero text and buttons
-- `src/components/Orb.tsx` – Orb background and hover/rotation logic
-- `src/components/GooeyNav.tsx` – Gooey navigation with particle effects
-- `src/components/GooeyNav.css` – Styles for the gooey nav/particle filter
-- `src/components/DecryptedText.tsx` – Decrypted/typing style animation for the hero heading
-- `src/components/Logo.tsx` – App/brand logo component
-- `src/index.css` – Global styles and Tailwind entry
+### 1. Enable Authentication Providers
+
+Navigate to **Authentication → Providers** in your Supabase dashboard:
+
+#### Email/Password
+- Enabled by default
+
+#### Anonymous Sign-in
+1. Find **Anonymous Sign-In** in the providers list
+2. Toggle **Enable Anonymous Sign-ins** to ON
+3. Save
+
+#### Google OAuth
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Navigate to **APIs & Services → Credentials**
+4. Click **Create Credentials → OAuth client ID**
+5. Select **Web application**
+6. Add authorized redirect URI:
+   ```
+   https://your-project-ref.supabase.co/auth/v1/callback
+   ```
+7. Copy the Client ID and Client Secret
+8. In Supabase Dashboard → Authentication → Providers → Google:
+   - Enable Google provider
+   - Paste Client ID and Client Secret
+   - Save
+
+#### GitHub OAuth
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click **New OAuth App**
+3. Fill in:
+   - **Application name**: Verbose
+   - **Homepage URL**: `http://localhost:5173` (or your production URL)
+   - **Authorization callback URL**: `https://your-project-ref.supabase.co/auth/v1/callback`
+4. Copy the Client ID and generate a Client Secret
+5. In Supabase Dashboard → Authentication → Providers → GitHub:
+   - Enable GitHub provider
+   - Paste Client ID and Client Secret
+   - Save
+
+### 2. Configure Site URL
+
+In Supabase Dashboard → Authentication → URL Configuration:
+- **Site URL**: `http://localhost:5173` (development) or your production URL
+- **Redirect URLs**: Add both localhost and production URLs
+
+---
+
+## Database Schema
+
+The app uses a `profiles` table to store user information:
+
+```sql
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  username TEXT UNIQUE,
+  full_name TEXT,
+  avatar_url TEXT,
+  is_anonymous BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+Features:
+- **Row Level Security (RLS)** — Users can only access their own profile
+- **Auto-creation trigger** — Profile automatically created on user signup
+- **Updated timestamp** — Automatically updates `updated_at` on changes
+
+---
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+
+---
+
+## Component Overview
+
+### FloatingLines
+Interactive Three.js shader-based background with:
+- Multiple wave layers (top, middle, bottom)
+- Mouse interaction support
+- Parallax scrolling
+- Customizable line count, colors, and animation speed
+
+### DecryptedText
+Character-by-character text reveal animation:
+- Configurable speed and direction
+- Supports hover and view-triggered animations
+- Scrambles through random characters before revealing
+
+### GooeyNav
+Navigation component with fluid particle effects:
+- Animated selection indicator
+- Configurable particle count and colors
+- Smooth SVG filter-based blur effect
+
+### ProfileAvatar
+User profile component showing:
+- OAuth provider avatar (Google/GitHub)
+- Letter fallback for email users
+- Guest icon for anonymous users
+- Dropdown menu with user info and sign out
+
+### LoginPage
+Full authentication UI with:
+- Tab-based navigation (Sign In / Sign Up / Guest)
+- Form validation
+- OAuth buttons for Google and GitHub
+- Error handling and loading states
+
+### HomePage
+Main dashboard after authentication:
+- Welcome card with user name
+- Feature cards for Chat, Voice Call, Video Call, Find People, Settings
+- Guest users see locked indicators on premium features
+- Upgrade prompts for anonymous users
 
 ---
 
 ## Customization
 
-### Hero Text & Buttons
+### Theme Colors
+The app uses a dark theme with purple/blue accents. Main colors are defined in CSS:
+- Primary gradient: `#7c5bff` → `#a78bfa`
+- Background: Dark with glass-morphism overlays
+- Text: White with varying opacity levels
 
-Edit `src/App.tsx`:
-
-- Change the hero message by updating the `text` prop on `DecryptedText`:
-  - `text="Talk more, With Verbose"`
-- Tweak animation via props: `speed`, `maxIterations`, `sequential`, `revealDirection`, `animateOn`.
-- Update the primary/secondary CTA labels on the two `Button` components.
-
-### Gooey Navigation Items
-
-Also in `src/App.tsx`, adjust the `items` passed to `GooeyNav`:
-
-```ts
-<GooeyNav
-  items=[
-    { label: "Home", href: "#" },
-    { label: "Docs", href: "#" },
-    { label: "Contact", href: "#" },
-  ]
+### FloatingLines Options
+```tsx
+<FloatingLines
+  enabledWaves={["top", "middle", "bottom"]}
+  lineCount={5}
+  lineDistance={5}
+  bendRadius={5}
+  bendStrength={-0.5}
+  interactive={true}
+  parallax={true}
+  mixBlendMode="screen"
 />
 ```
 
-- Change labels and `href`s to fit your sections/routes.
-- Advanced behavior (animation time, particle count etc.) can be tuned via optional `GooeyNav` props: `animationTime`, `particleCount`, `particleDistances`, `particleR`, `timeVariance`, `colors`, and `initialActiveIndex`.
+### DecryptedText Options
+```tsx
+<DecryptedText
+  text="Your text here"
+  speed={50}
+  maxIterations={12}
+  sequential={true}
+  revealDirection="start"
+  animateOn="view"
+/>
+```
 
-### Orb Behavior
-
-`Orb` accepts several props (see `src/components/Orb.tsx`):
-
-- `hoverIntensity` – how strongly the orb reacts to hover
-- `rotateOnHover` – enable/disable rotation
-- `hue` – base color hue
-- `forceHoverState` – force the hover effect on/off
-
-Adjust these to match your brand style and motion preferences.
+### GooeyNav Options
+```tsx
+<GooeyNav
+  items={[
+    { label: "Home", href: "#" },
+    { label: "Docs", href: "#" },
+    { label: "Contact", href: "#" },
+  ]}
+  animationTime={600}
+  particleCount={15}
+/>
+```
 
 ---
 
-## Scripts Reference
+## Deployment
 
-All scripts are defined in `package.json`:
+### Build for Production
+```bash
+npm run build
+```
 
-- `pnpm dev` – Start Vite dev server
-- `pnpm build` – Type-check and build for production
-- `pnpm preview` – Preview the production build
-- `pnpm lint` – Run ESLint over the project
+The output will be in the `dist/` directory.
+
+### Environment Variables
+Ensure these are set in your production environment:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+### Update OAuth Redirect URLs
+Add your production domain to:
+1. Google Cloud Console → OAuth client → Authorized redirect URIs
+2. GitHub OAuth App → Authorization callback URL
+3. Supabase → Authentication → URL Configuration → Redirect URLs
+
+### Hosting Providers
+Deploy the `dist` folder to any static hosting:
+- Vercel
+- Netlify
+- Cloudflare Pages
+- GitHub Pages
 
 ---
 
-## Deploying
+## Troubleshooting
 
-After running `pnpm build`, deploy the contents of the `dist` folder to any static hosting provider (Netlify, Vercel, GitHub Pages, Cloudflare Pages, etc.). The app is a purely client-side SPA built with Vite.
+### Common Issues
+
+**"Anonymous sign-ins are disabled"**
+- Enable Anonymous Sign-in in Supabase → Authentication → Providers
+
+**"redirect_uri_mismatch" on OAuth**
+- Ensure the redirect URI in your OAuth provider matches exactly:
+  `https://your-project-ref.supabase.co/auth/v1/callback`
+
+**DNS errors / NXDOMAIN**
+- Check that `VITE_SUPABASE_URL` has the correct project reference ID
+- Verify the URL is accessible: `nslookup your-project-ref.supabase.co`
+
+**Stuck on loading after user deletion**
+- The app handles this automatically by detecting deleted users and signing out
+
+**Background causes performance issues**
+- The FloatingLines shader is memoized to prevent re-renders
+- Reduce `lineCount` for better performance on low-end devices
+
+---
+
+## License
+
+MIT License — feel free to use this project as a starting point for your own applications.
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
