@@ -19,9 +19,6 @@ function App() {
     }
   }, [user]);
 
-  // Debug logging
-  console.log('[App] Render state:', { loading, showLogin, user: user?.id, isAnonymous: user?.is_anonymous });
-
   // Show loading state
   if (loading) {
     return (

@@ -193,9 +193,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInAsAnonymous = async () => {
     setLoading(true);
     try {
-      console.log('[Auth] Calling signInAnonymously...');
-      const result = await signInAnonymously();
-      console.log('[Auth] signInAnonymously returned:', result);
+      await signInAnonymously();
     } finally {
       setLoading(false);
     }

@@ -160,11 +160,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
     setIsSubmitting(true);
     setErrors({});
     try {
-      console.log('[LoginPage] Starting anonymous sign-in...');
       await signInAsAnonymous();
-      console.log('[LoginPage] Anonymous sign-in completed successfully');
     } catch (error: unknown) {
-      console.error('[LoginPage] Anonymous sign-in failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to continue as guest';
       setErrors({ general: errorMessage });
     } finally {
