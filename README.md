@@ -1,4 +1,4 @@
-# Verbose Orb Landing (React + Vite)
+# Verbose 
 
 This project is a small React + TypeScript + Vite app that showcases a glowing orb background, a gooey navigation menu, and an animated "decrypted" hero title:
 
