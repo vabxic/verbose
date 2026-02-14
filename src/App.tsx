@@ -33,12 +33,15 @@ function App() {
         <div className="pointer-events-auto flex flex-col items-center">
           <Text as="h1" variant="h1">
             <DecryptedText
-              text="Talk more, With Verbose"
+              text="Talk more, with verbose"
               speed={50}
               maxIterations={12}
               sequential
               revealDirection="start"
               animateOn="view"
+              parentClassName="hero-title"
+              className="hero-char"
+              encryptedClassName="hero-encrypted"
             />
           </Text>
           <div className="flex items-center gap-4 mt-8">
