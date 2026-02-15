@@ -1,10 +1,108 @@
-import React, { useState, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useMemo, Suspense, lazy, useEffect } from 'react';
+import { useSpring, animated } from '@react-spring/web';
 import { useAuth } from '../providers/auth';
 import { Logo } from './Logo';
 import './LoginPage.css';
 
 const Threads = lazy(() => import('./Threads'));
 const SplashCursor = lazy(() => import('./SplashCursor'));
+
+/* Rotating SVG icon with scroll-based parallax offset */
+function FloatingIcon({
+  children,
+  top,
+  left,
+  right,
+  size = 48,
+  speed = 0.3,
+  rotationDuration = 12000,
+  opacity = 0.75,
+  reverse = false,
+}: {
+  children: React.ReactNode;
+  top: string;
+  left?: string;
+  right?: string;
+  size?: number;
+  speed?: number;
+  rotationDuration?: number;
+  opacity?: number;
+  reverse?: boolean;
+}) {
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const container = document.querySelector('.login-page');
+    if (!container) return;
+    const onScroll = () => setScrollY(container.scrollTop);
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const spring = useSpring({
+    from: { rotate: 0 },
+    to: { rotate: reverse ? -360 : 360 },
+    loop: true,
+    config: { duration: rotationDuration },
+  });
+
+  const parallaxY = scrollY * speed;
+
+  return (
+    <animated.div
+      style={{
+        position: 'absolute',
+        top,
+        left,
+        right,
+        width: size,
+        height: size,
+        opacity,
+        pointerEvents: 'none' as const,
+        zIndex: 15,
+        transform: spring.rotate.to(
+          (r: number) => `translateY(${parallaxY}px) rotate(${r}deg)`
+        ),
+        color: '#ffffff',
+      }}
+    >
+      {children}
+    </animated.div>
+  );
+}
+
+/* Phone / Audio call SVG icon */
+const PhoneIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="100%" height="100%">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
+
+/* Video call SVG icon */
+const VideoIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="100%" height="100%">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+);
+
+/* Microphone SVG icon */
+const MicIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="100%" height="100%">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </svg>
+);
+
+/* Headphones SVG icon */
+const HeadphonesIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="100%" height="100%">
+    <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+  </svg>
+);
 
 type AuthMode = 'signin' | 'signup' | 'anonymous' | 'forgot';
 
@@ -32,6 +130,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -225,20 +333,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
   // Memoize the background animation so it doesn't remount on every input change
   const background = useMemo(
     () => (
-      <>
-        <Suspense fallback={null}>
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, pointerEvents: 'none' }}>
-            <SplashCursor />
-          </div>
-        </Suspense>
-        <Suspense fallback={null}>
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, pointerEvents: 'none' }}>
-            <Threads />
-          </div>
-        </Suspense>
-      </>
+      isMobile
+        ? null
+        : (
+            <>
+              <Suspense fallback={null}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, pointerEvents: 'none' }}>
+                  <SplashCursor />
+                </div>
+              </Suspense>
+              <Suspense fallback={null}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, pointerEvents: 'none' }}>
+                  <Threads />
+                </div>
+              </Suspense>
+            </>
+          )
     ),
-    []
+    [isMobile]
   );
 
   if (loading) {
@@ -256,6 +368,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
     <div className="login-page">
       {/* Background animation */}
       <div className="login-background">{background}</div>
+
+      {/* Rotating parallax floating icons */}
+      <FloatingIcon top="10%" left="8%" size={48} speed={-0.15} rotationDuration={14000} opacity={0.4}>
+        <PhoneIcon />
+      </FloatingIcon>
+      <FloatingIcon top="20%" right="10%" size={38} speed={-0.25} rotationDuration={10000} opacity={0.35} reverse>
+        <VideoIcon />
+      </FloatingIcon>
+      <FloatingIcon top="70%" left="5%" size={34} speed={-0.2} rotationDuration={18000} opacity={0.35}>
+        <MicIcon />
+      </FloatingIcon>
+      <FloatingIcon top="75%" right="8%" size={42} speed={-0.3} rotationDuration={12000} opacity={0.4} reverse>
+        <HeadphonesIcon />
+      </FloatingIcon>
 
       {/* Login container */}
       <div className="login-container">
