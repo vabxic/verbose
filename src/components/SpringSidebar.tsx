@@ -39,11 +39,7 @@ const defaultIcons = {
       <path d="M12 5l7 7-7 7" />
     </svg>
   ),
-  contact: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  ),
+  // contact icon removed (section removed from landing)
 };
 
 const SpringSidebar: React.FC<SpringSidebarProps> = ({ sections, scrollRef }) => {
@@ -105,7 +101,6 @@ const SpringSidebar: React.FC<SpringSidebarProps> = ({ sections, scrollRef }) =>
       features: defaultIcons.features,
       anonymous: defaultIcons.anonymous,
       start: defaultIcons.start,
-      contact: defaultIcons.contact,
     };
 
     return iconMap[section.id] || defaultIcons.hero;
