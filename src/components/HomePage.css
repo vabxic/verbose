@@ -36,7 +36,32 @@
 .home-header-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
+}
+
+/* ── Header icon buttons ── */
+.home-header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.home-header-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.home-header-icon-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* ── Navigation ── */
@@ -106,6 +131,84 @@
   font-size: 1.05rem;
   color: rgba(255, 255, 255, 0.5);
   margin: 0;
+}
+
+/* ── Find People prominent card ── */
+.home-find-people-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(124, 91, 255, 0.08), rgba(167, 139, 250, 0.04));
+  border: 1px solid rgba(124, 91, 255, 0.15);
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.home-find-people-card:hover {
+  background: linear-gradient(135deg, rgba(124, 91, 255, 0.14), rgba(167, 139, 250, 0.08));
+  border-color: rgba(124, 91, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(124, 91, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.home-find-people-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.home-find-people-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(124, 91, 255, 0.15);
+  color: #a78bfa;
+}
+
+.home-find-people-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.home-find-people-left h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 0.2rem;
+}
+
+.home-find-people-left p {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+.home-find-people-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(124, 91, 255, 0.15);
+  color: #a78bfa;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.home-find-people-btn:hover {
+  background: rgba(124, 91, 255, 0.3);
+  color: #fff;
 }
 
 /* ── Feature grid ── */
@@ -249,6 +352,10 @@
 
   .home-welcome-title {
     font-size: 1.5rem;
+  }
+
+  .home-find-people-card {
+    padding: 1.25rem 1.25rem;
   }
 
   .home-grid {

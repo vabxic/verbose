@@ -1,0 +1,209 @@
+/* ── Spring Sidebar (Landing Page) ── */
+.spring-sidebar {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+  pointer-events: none;
+  width: auto;
+  max-width: 120px;
+  overflow: hidden;
+}
+
+.spring-sidebar-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+  padding: 1.25rem 0.75rem;
+  border-radius: 20px 0 0 20px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: none;
+  pointer-events: auto;
+}
+
+/* (glass wrapper removed) */
+
+.spring-sidebar-dot {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.spring-sidebar-dot:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3), inset 0 0 12px rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: scale(1.35);
+}
+
+.spring-sidebar-dot.active {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.45), 0 0 48px rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.spring-sidebar-dot-icon {
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.spring-sidebar-dot:hover .spring-sidebar-dot-icon {
+  transform: scale(1.2);
+}
+
+.spring-sidebar-dot.active .spring-sidebar-dot-icon {
+  transform: scale(1.25);
+}
+
+.spring-sidebar-dot svg {
+  width: 100%;
+  height: 100%;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Tooltip on hover */
+.spring-sidebar-dot .spring-sidebar-tooltip {
+  position: absolute;
+  right: calc(100% + 12px);
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(15, 15, 30, 0.85);
+  backdrop-filter: blur(12px);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.spring-sidebar-dot:hover .spring-sidebar-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Active indicator line connecting dots */
+.spring-sidebar-indicator {
+  position: absolute;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(124, 91, 255, 0.6), rgba(167, 139, 250, 0.3));
+  border-radius: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: none;
+}
+
+/* ── Scroll sections ── */
+.landing-scroll-container {
+  width: 100%;
+  height: 100vh;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+}
+
+.landing-section {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: start;
+  position: relative;
+}
+
+/* Section content animations */
+.landing-section-content {
+  text-align: center;
+  max-width: 700px;
+  padding: 0 2rem;
+}
+
+.landing-section-content h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 1rem;
+  line-height: 1.2;
+}
+
+.landing-section-content p {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+}
+
+.landing-section-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: rgba(124, 91, 255, 0.1);
+  border: 1px solid rgba(124, 91, 255, 0.2);
+  color: #a78bfa;
+}
+
+.landing-section-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .spring-sidebar-track {
+    padding: 0.75rem 0.5rem;
+    gap: 2rem;
+  }
+
+  .spring-sidebar-dot {
+    width: 20px;
+    height: 20px;
+  }
+
+  .spring-sidebar-dot-icon {
+    width: 10px;
+    height: 10px;
+  }
+
+  .landing-section-content h2 {
+    font-size: 1.75rem;
+  }
+
+  .landing-section-content p {
+    font-size: 0.95rem;
+  }
+}
