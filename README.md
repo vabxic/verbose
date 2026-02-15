@@ -225,152 +225,184 @@ Interactive Three.js shader-based background with:
 
 ### DecryptedText
 Character-by-character text reveal animation:
-- Configurable speed and direction
-- Supports hover and view-triggered animations
-- Scrambles through random characters before revealing
+# Verbose — current code snapshot
 
-### GooeyNav
-Navigation component with fluid particle effects:
-- Animated selection indicator
-- Configurable particle count and colors
-- Smooth SVG filter-based blur effect
+A modern, experimental real-time communication UI built with React + TypeScript and Supabase.
 
-### ProfileAvatar
-User profile component showing:
-- OAuth provider avatar (Google/GitHub)
-- Letter fallback for email users
-- Guest icon for anonymous users
-- Dropdown menu with user info and sign out
+This README has been generated from the current workspace sources and highlights the
+app behaviour, important files, runtime scripts, and Supabase configuration required
+to run the project locally.
 
-### LoginPage
-Full authentication UI with:
-- Tab-based navigation (Sign In / Sign Up / Guest)
-- Form validation
-- OAuth buttons for Google and GitHub
-- Error handling and loading states
-
-### HomePage
-Main dashboard after authentication:
-- Welcome card with user name
-- Feature cards for Chat, Voice Call, Video Call, Find People, Settings
-- Guest users see locked indicators on premium features
-- Upgrade prompts for anonymous users
+![React](https://img.shields.io/badge/React-19.1.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue) ![Supabase](https://img.shields.io/badge/Supabase-Auth-green) ![Vite](https://img.shields.io/badge/Vite-5.4-purple)
 
 ---
 
-## Customization
+**Quick summary**
+- Name: Verbose (UI reads `VERBOSE` in `src/components/Logo.tsx`)
+- Primary entry: [src/main.tsx](src/main.tsx#L1)
+- App root: [src/App.tsx](src/App.tsx#L1)
+- Supabase client and auth helpers: [src/lib/supabase.ts](src/lib/supabase.ts#L1)
 
-### Theme Colors
-The app uses a dark theme with purple/blue accents. Main colors are defined in CSS:
-- Primary gradient: `#7c5bff` → `#a78bfa`
-- Background: Dark with glass-morphism overlays
-- Text: White with varying opacity levels
-
-### FloatingLines Options
-```tsx
-<FloatingLines
-  enabledWaves={["top", "middle", "bottom"]}
-  lineCount={5}
-  lineDistance={5}
-  bendRadius={5}
-  bendStrength={-0.5}
-  interactive={true}
-  parallax={true}
-  mixBlendMode="screen"
-/>
-```
-
-### DecryptedText Options
-```tsx
-<DecryptedText
-  text="Your text here"
-  speed={50}
-  maxIterations={12}
-  sequential={true}
-  revealDirection="start"
-  animateOn="view"
-/>
-```
-
-### GooeyNav Options
-```tsx
-<GooeyNav
-  items={[
-    { label: "Home", href: "#" },
-    { label: "Docs", href: "#" },
-    { label: "Contact", href: "#" },
-  ]}
-  animationTime={600}
-  particleCount={15}
-/>
-```
+**What this repo contains**
+- A landing / auth flow with animated backgrounds (Three/OGL shaders + fluid sim)
+- Authentication via Supabase (email/password, Google, GitHub, anonymous)
+- Demo UI pages: landing, login, and a simple home/dashboard
+- Several visual components: `DecryptedText`, `Threads` (shader), `SplashCursor` (fluid), `Aurora`, `SpringSidebar` and `ProfileAvatar`.
 
 ---
 
-## Deployment
+**Table of contents**
+- **Project layout**
+- **Install & run**
+- **Environment & Supabase setup**
+- **Auth flow details**
+- **Important components & behaviour**
+- **Scripts**
+- **Development notes**
+- **Troubleshooting**
+- **Contributing**
 
-### Build for Production
+---
+
+**Project layout (high level)**
+
+```
+verbose/
+├─ public/                        # static assets
+├─ src/
+│  ├─ assets/                      # images and static media
+│  ├─ components/                  # UI components & visual pieces
+│  │  ├─ App.tsx                    # main app root (landing / auth / home)
+│  │  ├─ HomePage.tsx               # authenticated dashboard UI
+│  │  ├─ LoginPage.tsx              # sign in / sign up / guest UI
+│  │  ├─ Threads.tsx                # shader-based animated lines (OGL)
+│  │  ├─ SplashCursor.tsx           # fluid simulation background
+│  │  ├─ DecryptedText.tsx          # scramble/reveal text animation
+│  │  ├─ ProfileAvatar.tsx          # user menu + avatar
+│  │  ├─ SpringSidebar.tsx          # landing scroll sidebar
+│  │  ├─ Logo.tsx                   # brand label
+│  │  └─ ...                        # other visual helpers
+│  ├─ lib/
+│  │  └─ supabase.ts                # supabase client + auth helper functions
+│  ├─ providers/
+│  │  ├─ app.tsx                    # UI provider & configuration
+│  │  └─ auth.tsx                   # auth context + session handling
+│  ├─ main.tsx                      # app bootstrap & route for auth callback
+│  └─ index.css                     # global styles
+├─ supabase-schema.sql              # suggested profile table schema
+├─ vite.config.ts                   # Vite config
+└─ package.json                     # scripts and dependencies
+```
+
+Files of special interest (quick links):
+- [src/App.tsx](src/App.tsx#L1)
+- [src/main.tsx](src/main.tsx#L1)
+- [src/lib/supabase.ts](src/lib/supabase.ts#L1)
+- [src/providers/auth.tsx](src/providers/auth.tsx#L1)
+- [src/components/Threads.tsx](src/components/Threads.tsx#L1)
+- [src/components/SplashCursor.tsx](src/components/SplashCursor.tsx#L1)
+- [src/components/DecryptedText.tsx](src/components/DecryptedText.tsx#L1)
+
+---
+
+**Install & run (local)**
+
+Prerequisites: Node.js 18+, npm (or pnpm).
+
+Steps:
+
+1. Install dependencies
+
 ```bash
-npm run build
+npm install
 ```
 
-The output will be in the `dist/` directory.
+2. Create a `.env` from your environment template and set Supabase keys (example variables expected by the code are `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`). See `src/lib/supabase.ts` for runtime checks and validation.
 
-### Environment Variables
-Ensure these are set in your production environment:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+3. Start dev server
 
-### Update OAuth Redirect URLs
-Add your production domain to:
-1. Google Cloud Console → OAuth client → Authorized redirect URIs
-2. GitHub OAuth App → Authorization callback URL
-3. Supabase → Authentication → URL Configuration → Redirect URLs
+```bash
+npm run dev
+```
 
-### Hosting Providers
-Deploy the `dist` folder to any static hosting:
-- Vercel
-- Netlify
-- Cloudflare Pages
-- GitHub Pages
+The app mounts at `http://localhost:5173` by default.
 
 ---
 
-## Troubleshooting
+**Environment & Supabase setup**
 
-### Common Issues
+- The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` via `import.meta.env` in [src/lib/supabase.ts](src/lib/supabase.ts#L1). If either is missing a warning is printed and some auth flows will fail.
+- OAuth callback route is handled by [src/components/AuthCallback.tsx](src/components/AuthCallback.tsx#L1) which exchanges the code and redirects to `/`.
+- Recommended DB object: the repository includes a `supabase-schema.sql` that defines a `profiles` table. `auth.tsx` uses `getUserProfile` to fetch profile info.
 
-**"Anonymous sign-ins are disabled"**
-- Enable Anonymous Sign-in in Supabase → Authentication → Providers
+Supabase providers to configure for full functionality:
+- Email/password: on by default.
+- Google and GitHub: for OAuth flows used in `src/lib/supabase.ts` (`signInWithGoogle`, `signInWithGitHub`).
+- Anonymous sign-in: code calls `supabase.auth.signInAnonymously()` for guest sessions.
 
-**"redirect_uri_mismatch" on OAuth**
-- Ensure the redirect URI in your OAuth provider matches exactly:
-  `https://your-project-ref.supabase.co/auth/v1/callback`
-
-**DNS errors / NXDOMAIN**
-- Check that `VITE_SUPABASE_URL` has the correct project reference ID
-- Verify the URL is accessible: `nslookup your-project-ref.supabase.co`
-
-**Stuck on loading after user deletion**
-- The app handles this automatically by detecting deleted users and signing out
-
-**Background causes performance issues**
-- The FloatingLines shader is memoized to prevent re-renders
-- Reduce `lineCount` for better performance on low-end devices
+When configuring OAuth providers, ensure the redirect URI includes your Supabase auth callback URL (e.g. `https://<project-ref>.supabase.co/auth/v1/callback`).
 
 ---
 
-## License
+**Auth flow details (implementation notes)**
 
-MIT License — feel free to use this project as a starting point for your own applications.
+- `src/providers/auth.tsx`:
+  - Reads the initial session using `supabase.auth.getSession()` and subscribes to `onAuthStateChange`.
+  - Provides helper methods to components: `signIn` (username + password via `signInWithUsername`), `signUp`, `signInGoogle`, `signInGitHub`, `signInAsAnonymous`, `signOut`, `resetPassword`, and `refreshProfile`.
+  - Defensive measures: timeouts around authentication calls and session verification to avoid indefinite loading states.
+
+- `src/lib/supabase.ts` exposes:
+  - `signUpWithEmail`, `signInWithEmail`, `signInWithGoogle`, `signInWithGitHub`, `signInAnonymously`, `signInWithUsername` (looks up email via RPC `get_email_by_username`), `getUserProfile`, `updateUserProfile`, and `resetPassword`.
 
 ---
 
-## Contributing
+**Important components & behaviour**
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+- `Threads` (`src/components/Threads.tsx`): shader-driven lines using `ogl`. The fragment shader composes many lines with Perlin-like noise. The component resizes on window resize and supports optional mouse interaction.
+- `SplashCursor` (`src/components/SplashCursor.tsx`): a WebGL fluid simulation used as animated background. It's a relatively large file implementing a GPU fluid solver and renderer.
+- `DecryptedText` (`src/components/DecryptedText.tsx`): a utility that scrambles and reveals text either on hover or when it comes into view.
+- `LoginPage` (`src/components/LoginPage.tsx`): handles sign in / sign up / guest flows with form validation and OAuth buttons.
+- `HomePage` (`src/components/HomePage.tsx`): lightweight dashboard that shows different UI for anonymous vs authenticated users (locks audio/video features for guests).
+
+---
+
+**Scripts (from package.json)**
+
+- `npm run dev` — start Vite dev server
+- `npm run build` — build (runs `tsc -b` then `vite build`)
+- `npm run preview` — preview production build
+- `npm run lint` — run ESLint
+
+See `package.json` for the exact versions and dependencies used.
+
+---
+
+**Developer notes & recommendations**
+
+- Performance: the shader and fluid simulation are GPU-heavy; the code disables heavy backgrounds on mobile (`isMobile` checks in `App.tsx` and `LoginPage.tsx`). Reduce shader complexity or element counts for lower-end devices.
+- Auth robustness: `auth.tsx` includes timeouts and extra verification to avoid stale sessions; when debugging auth issues, check browser console and Supabase dashboard logs.
+- Username->email lookup: `signInWithUsername` uses an RPC `get_email_by_username` — if you use this feature, ensure the corresponding database function exists in your Supabase DB.
+
+---
+
+**Troubleshooting (quick)**
+
+- "Missing Supabase keys" — ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set.
+- OAuth redirect mismatch — confirm redirect URIs in Google/GitHub match your Supabase callback URL.
+- Fluid shader/GL errors — test with a modern browser and enable WebGL2; `SplashCursor` falls back on reduced features when extensions are missing.
+
+---
+
+**Contributing**
+
+If you'd like to contribute:
+1. Fork and branch
+2. Run the app locally and add tests or examples
+3. Open a PR with a short description of the change
+
+---
+
+**License**
+
+MIT
 
