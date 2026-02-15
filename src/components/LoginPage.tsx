@@ -104,7 +104,7 @@ const HeadphonesIcon = () => (
   </svg>
 );
 
-type AuthMode = 'signin' | 'signup' | 'anonymous' | 'forgot';
+type AuthMode = 'signin' | 'signup' | 'anonymous' | 'forgot' | 'magiclink';
 
 interface FormErrors {
   email?: string;
@@ -120,7 +120,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) => {
-  const { signIn, signUp, signInGoogle, signInGitHub, signInAsAnonymous, resetPassword, loading } = useAuth();
+  const { signIn, signUp, signInGoogle, signInGitHub, signInAsAnonymous, resetPassword, signInWithMagicLink, loading } = useAuth();
   
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
@@ -208,7 +208,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
       }
     }
 
-    if (mode === 'forgot') {
+    if (mode === 'forgot' || mode === 'magiclink') {
       if (!email) {
         newErrors.email = 'Email is required';
       } else if (!validateEmail(email)) {
@@ -310,6 +310,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
       setEmail('');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to send reset email';
+      setErrors({ general: errorMessage });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      await signInWithMagicLink(email);
+      setSuccessMessage('Magic link sent! Check your email to sign in.');
+      setEmail('');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send magic link';
       setErrors({ general: errorMessage });
     } finally {
       setIsSubmitting(false);
@@ -538,6 +557,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
           {/* Sign Up Form */}
           {mode === 'signup' && (
             <form onSubmit={handleSignUp} className="login-form">
+              {/* Magic link quick option placed above other signup fields */}
+              <div className="form-group">
+                <button
+                  type="button"
+                  className="magic-link-btn"
+                  onClick={() => switchMode('magiclink')}
+                  disabled={isSubmitting}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  Sign up with Magic Link
+                </button>
+              </div>
+
+              <div className="login-divider">
+                <span>or</span>
+              </div>
+
               <div className="form-group">
                 <label htmlFor="signup-email">Email *</label>
                 <input
@@ -717,6 +756,52 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
                 Remember your password?{' '}
                 <button type="button" onClick={() => switchMode('signin')}>
                   Sign in
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* Magic Link Form */}
+          {mode === 'magiclink' && (
+            <form onSubmit={handleMagicLink} className="login-form">
+              <div className="forgot-password-info">
+                <div className="forgot-password-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </div>
+                <h3>Sign Up with Magic Link</h3>
+                <p>Enter your email and we'll send you a secure link to create your account — no password needed!</p>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="magiclink-email">Email</label>
+                <input
+                  type="email"
+                  id="magiclink-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className={errors.email ? 'error' : ''}
+                  disabled={isSubmitting}
+                  autoFocus
+                />
+                {errors.email && <span className="field-error">{errors.email}</span>}
+              </div>
+
+              <button
+                type="submit"
+                className="login-submit-btn"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Sending...' : 'Send Magic Link'}
+              </button>
+
+              <p className="login-switch">
+                Want to use a password?{' '}
+                <button type="button" onClick={() => switchMode('signup')}>
+                  Sign up normally
                 </button>
               </p>
             </form>

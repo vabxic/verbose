@@ -11,6 +11,7 @@ import Loader from "./components/loader";
 import SocialLink from "./components/SocialLink";
 const LoginPage = lazy(() => import("./components/LoginPage"));
 const HomePage = lazy(() => import("./components/HomePage"));
+import ProfileAvatar from "./components/ProfileAvatar";
 import { useAuth } from "./providers/auth";
 
 const LANDING_SECTIONS = [
@@ -233,11 +234,20 @@ function FadeSection({ children, className = "" }: { children: React.ReactNode; 
 }
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, session, loading, isAnonymous } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [showSplashCursor, setShowSplashCursor] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Handle Get Started button - if session exists, don't show login
+  const handleGetStarted = () => {
+    if (user || session) {
+      // User already logged in, the render logic will show HomePage
+      return;
+    }
+    setShowLogin(true);
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -267,6 +277,8 @@ function App() {
     );
   }
 
+  // If user is logged in (has session), go straight to Home.
+  // This prevents showing the landing/login page on every reload.
   if (user) {
     return (
       <Suspense fallback={null}>
@@ -304,6 +316,13 @@ function App() {
       <div className="fixed top-6 left-8 z-40 pointer-events-none">
         <Logo />
       </div>
+
+      {/* Profile avatar top-right - show only for logged-in non-guest users */}
+      {user && !isAnonymous && (
+        <div className="fixed top-6 right-8 z-40" style={{ pointerEvents: 'auto' }}>
+          <ProfileAvatar />
+        </div>
+      )}
 
       {/* ── Rotating parallax floating icons ── */}
       <FloatingIcon top="12%" left="8%" size={56} speed={-0.15} rotationDuration={14000} opacity={0.75}>
@@ -350,7 +369,7 @@ function App() {
                 The next-gen communication platform — sleek, fast, and private.
               </p>
               <div className="flex items-center justify-center mt-6">
-                <StyledButton onClick={() => setShowLogin(true)}>
+                <StyledButton onClick={handleGetStarted}>
                   <span>Get Started</span>
                 </StyledButton>
               </div>

@@ -10,6 +10,7 @@ import {
   signOut as supabaseSignOut,
   getUserProfile,
   resetPassword as supabaseResetPassword,
+  signInWithMagicLink as supabaseMagicLink,
 } from '../lib/supabase';
 import type { UserProfile } from '../lib/supabase';
 
@@ -27,6 +28,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  signInWithMagicLink: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,7 +55,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
-      const userProfile = await getUserProfile(userId);
+      // Add timeout to prevent infinite loading
+      const profilePromise = getUserProfile(userId);
+      const timeoutPromise = new Promise<null>((resolve) => 
+        setTimeout(() => resolve(null), 5000)
+      );
+      
+      const userProfile = await Promise.race([profilePromise, timeoutPromise]);
       setProfile(userProfile);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -71,21 +79,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Get initial session and validate user exists. Ensure loading always finishes.
     (async () => {
       try {
-        // Add a timeout to avoid indefinite hanging
-        const getSessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ timeout: true }), 12000));
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        const result: any = await Promise.race([getSessionPromise, timeoutPromise]);
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (result && result.timeout) {
-          console.warn('getSession() timed out after 12s');
-          setSession(null);
-          setUser(null);
-          return;
-        }
-
-        const { data: { session }, error } = result;
         if (error) {
           console.error('Error getting session:', error);
           setSession(null);
@@ -170,6 +165,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signInWithMagicLink = async (email: string) => {
+    try {
+      await supabaseMagicLink(email);
+    } catch (err) {
+      console.error('Magic link sign-in failed:', err);
+      throw err;
+    }
+  };
+
   const signUp = async (
     email: string,
     password: string,
@@ -223,14 +227,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async () => {
-    setLoading(true);
+    // Clear state immediately so the UI switches to the landing page
+    // without showing a long loading spinner.
+    setUser(null);
+    setSession(null);
+    setProfile(null);
     try {
       await supabaseSignOut();
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('Sign-out error:', err);
     }
   };
 
@@ -248,6 +253,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     refreshProfile,
     resetPassword,
+    signInWithMagicLink,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

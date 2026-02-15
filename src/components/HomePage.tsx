@@ -3,7 +3,6 @@ import { useAuth } from '../providers/auth';
 import { Logo } from './Logo';
 import ProfileAvatar from './ProfileAvatar';
 import LoginPage from './LoginPage';
-import Aurora from './Aurora';
 import './HomePage.css';
 
 export const HomePage: React.FC = () => {
@@ -27,9 +26,6 @@ export const HomePage: React.FC = () => {
       user?.email?.split('@')[0] ||
       'User';
 
-  // Aurora color palette: pink, blue, violet
-  const auroraPalette = ["#E947F5", "#2F4BA2", "#7C5BFF"];
-
   // Show login page for account upgrade
   if (showLoginUpgrade) {
     return <LoginPage onBack={() => setShowLoginUpgrade(false)} hideGuestTab />;
@@ -37,10 +33,6 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="home-page">
-      {/* Background */}
-      <div className="home-background">
-        <Aurora colorStops={auroraPalette} amplitude={1.0} blend={0.5} speed={1} />
-      </div>
 
       {/* Top bar */}
       <header className="home-header">
@@ -98,30 +90,6 @@ export const HomePage: React.FC = () => {
               </button>
             </div>
           )}
-        </div>
-
-        {/* Find People — prominent card */}
-        <div className="home-find-people-card">
-          <div className="home-find-people-left">
-            <div className="home-find-people-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-            </div>
-            <div>
-              <h3>Find People</h3>
-              <p>Discover and connect with new people around you</p>
-            </div>
-          </div>
-          <button className="home-find-people-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-              <path d="M5 12h14" />
-              <path d="M12 5l7 7-7 7" />
-            </svg>
-          </button>
         </div>
 
         <div className="home-grid">

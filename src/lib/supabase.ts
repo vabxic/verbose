@@ -185,3 +185,16 @@ export const resetPassword = async (email: string) => {
   if (error) throw error;
   return data;
 };
+
+// Sign in with magic link (passwordless email authentication)
+export const signInWithMagicLink = async (email: string) => {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  if (error) throw error;
+  return data;
+};
