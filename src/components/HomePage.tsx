@@ -4,6 +4,7 @@ import { Logo } from './Logo';
 import ProfileAvatar from './ProfileAvatar';
 import LoginPage from './LoginPage';
 import ChatRoom from './ChatRoom';
+import BackgroundHome from './background_home';
 import { createRoom, joinRoomByCode, sendMessage } from '../lib/rooms';
 import type { Room } from '../lib/rooms';
 import './HomePage.css';
@@ -35,6 +36,7 @@ export const HomePage: React.FC = () => {
   const [roomError, setRoomError] = useState('');
   const [showJoinModal, setShowJoinModal] = useState(false);
   const prevUserIdRef = useRef(user?.id);
+  const urlJoinAttemptedRef = useRef(false);
 
   const displayName = isAnonymous
     ? 'Guest'
@@ -74,6 +76,32 @@ export const HomePage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Auto-join from URL ?join=CODE param ──────
+  useEffect(() => {
+    if (urlJoinAttemptedRef.current || !user?.id || activeRoom) return;
+    const params = new URLSearchParams(window.location.search);
+    const joinParam = params.get('join');
+    if (!joinParam) return;
+
+    urlJoinAttemptedRef.current = true;
+    window.history.replaceState({}, '', window.location.pathname);
+
+    (async () => {
+      setIsJoining(true);
+      try {
+        const { room } = await joinRoomByCode(joinParam.trim(), user!.id, displayName);
+        await sendMessage(room.id, user!.id, displayName, `${displayName} joined the room`, 'system');
+        setActiveRoom(room);
+        setActiveView('chat');
+      } catch (err: unknown) {
+        setRoomError(err instanceof Error ? err.message : 'Invalid or expired invite link');
+      } finally {
+        setIsJoining(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // ── Create a new room ────────────────────────
   const handleCreateRoom = async () => {
@@ -135,7 +163,8 @@ export const HomePage: React.FC = () => {
   }
 
   return (
-    <div className="home-page">
+    <BackgroundHome>
+      <div className="home-page">
 
       {/* ── Join Room Modal ── */}
       {showJoinModal && (
@@ -310,7 +339,8 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </BackgroundHome>
   );
 };
 

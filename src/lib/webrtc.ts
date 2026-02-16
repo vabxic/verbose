@@ -53,6 +53,7 @@ export class WebRTCService {
   // ICE candidate buffering – candidates that arrive before remoteDescription is set
   private pendingCandidates: RTCIceCandidateInit[] = [];
   private hasRemoteDescription = false;
+  private pendingOfferSignal: RoomSignal | null = null;
 
   // Signal processing queue to prevent race conditions
   private signalQueue: RoomSignal[] = [];
@@ -122,6 +123,7 @@ export class WebRTCService {
       this.callbacks.onConnectionStateChange(pc.connectionState);
       // Only end on 'failed' – 'disconnected' is often temporary and may reconnect
       if (pc.connectionState === 'failed') {
+        this.endCall();
         this.callbacks.onCallEnded();
       }
     };
@@ -175,6 +177,7 @@ export class WebRTCService {
         await this.handleIceCandidate(signal);
         break;
       case 'hang-up':
+        this.endCall();
         this.callbacks.onCallEnded();
         break;
     }
@@ -203,15 +206,24 @@ export class WebRTCService {
   }
 
   // ── Handle incoming offer (callee side) ─────
+  // Stores the offer and notifies UI; callee must call acceptCall() or rejectCall()
   private async handleOffer(signal: RoomSignal): Promise<void> {
     const payload = signal.payload as { sdp: string; type: RTCSdpType; callType: CallType };
+    this.pendingOfferSignal = signal;
+    this.callbacks.onIncomingCall?.(payload.callType);
+  }
 
+  // ── Accept an incoming call ─────────────────
+  async acceptCall(): Promise<void> {
+    if (!this.pendingOfferSignal) return;
+    const signal = this.pendingOfferSignal;
+    this.pendingOfferSignal = null;
+
+    const payload = signal.payload as { sdp: string; type: RTCSdpType; callType: CallType };
     const stream = await this.getLocalStream(payload.callType);
     const pc = this.createPeerConnection();
 
-    // Notify UI about local stream and incoming call type (callee side)
     this.callbacks.onLocalStream(stream);
-    this.callbacks.onIncomingCall?.(payload.callType);
 
     stream.getTracks().forEach((track) => {
       pc.addTrack(track, stream);
@@ -221,7 +233,6 @@ export class WebRTCService {
       new RTCSessionDescription({ sdp: payload.sdp, type: payload.type }),
     );
 
-    // Remote description is set – flush buffered ICE candidates
     this.hasRemoteDescription = true;
     await this.flushPendingCandidates();
 
@@ -235,6 +246,14 @@ export class WebRTCService {
       { sdp: answer.sdp, type: answer.type },
       signal.sender_id,
     );
+  }
+
+  // ── Reject an incoming call ─────────────────
+  async rejectCall(): Promise<void> {
+    if (!this.pendingOfferSignal) return;
+    const signal = this.pendingOfferSignal;
+    this.pendingOfferSignal = null;
+    await sendSignal(this.roomId, this.userId, 'hang-up', {}, signal.sender_id);
   }
 
   // ── Handle incoming answer ──────────────────
@@ -299,11 +318,11 @@ export class WebRTCService {
   // ── Hang up ─────────────────────────────────
   async hangUp(): Promise<void> {
     await sendSignal(this.roomId, this.userId, 'hang-up', {});
-    this.cleanup();
+    this.endCall();
   }
 
-  // ── Cleanup ─────────────────────────────────
-  cleanup(): void {
+  // ── End current call (keeps signaling alive for future calls) ──
+  endCall(): void {
     this.localStream?.getTracks().forEach((t) => t.stop());
     this.localStream = null;
 
@@ -312,6 +331,12 @@ export class WebRTCService {
 
     this.pendingCandidates = [];
     this.hasRemoteDescription = false;
+    this.pendingOfferSignal = null;
+  }
+
+  // ── Full cleanup (unmount) ──────────────────
+  cleanup(): void {
+    this.endCall();
     this.signalQueue = [];
     this.processingSignal = false;
 

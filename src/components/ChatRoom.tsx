@@ -25,7 +25,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [participants, setParticipants] = useState<RoomParticipant[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [showParticipantsTooltip, setShowParticipantsTooltip] = useState(false);
 
   // Call state
   const [inCall, setInCall] = useState(false);
@@ -34,13 +34,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | ''>('');
   const [showCopied, setShowCopied] = useState(false);
+  const [showLinkCopied, setShowLinkCopied] = useState(false);
+  const [incomingCall, setIncomingCall] = useState<{ type: CallType } | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const webrtcRef = useRef<WebRTCService | null>(null);
-  const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Store streams in refs so they persist across renders / DOM changes
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -82,33 +83,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
     const unsubMessages = subscribeToMessages(room.id, (msg) => {
       console.log('[ChatRoom] Received realtime message:', msg);
-      
-      // Show typing indicator for other users briefly before they send a message
-      if (msg.sender_id !== user.id && msg.type !== 'system') {
-        setTypingUsers((prev) => {
-          const updated = new Set(prev);
-          updated.add(msg.sender_id);
-          return updated;
-        });
-        
-        // Clear typing indicator timeout for this user if exists
-        if (typingTimeoutsRef.current.has(msg.sender_id)) {
-          clearTimeout(typingTimeoutsRef.current.get(msg.sender_id)!);
-        }
-        
-        // Clear typing indicator after delay
-        const timeout = setTimeout(() => {
-          setTypingUsers((prev) => {
-            const updated = new Set(prev);
-            updated.delete(msg.sender_id);
-            return updated;
-          });
-          typingTimeoutsRef.current.delete(msg.sender_id);
-        }, 1500);
-        
-        typingTimeoutsRef.current.set(msg.sender_id, timeout);
-      }
-      
+
       setMessages((prev) => {
         // Deduplicate
         if (prev.some((m) => m.id === msg.id)) {
@@ -135,31 +110,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
           const newMsgs = msgs.filter((m) => !existingIds.has(m.id));
           if (newMsgs.length > 0) {
             console.log('[ChatRoom] Poll found', newMsgs.length, 'new messages');
-            // Show typing for new messages from other users
-            newMsgs.forEach((msg) => {
-              if (msg.sender_id !== user.id && msg.type !== 'system') {
-                setTypingUsers((prev) => {
-                  const updated = new Set(prev);
-                  updated.add(msg.sender_id);
-                  return updated;
-                });
-                
-                if (typingTimeoutsRef.current.has(msg.sender_id)) {
-                  clearTimeout(typingTimeoutsRef.current.get(msg.sender_id)!);
-                }
-                
-                const timeout = setTimeout(() => {
-                  setTypingUsers((prev) => {
-                    const updated = new Set(prev);
-                    updated.delete(msg.sender_id);
-                    return updated;
-                  });
-                  typingTimeoutsRef.current.delete(msg.sender_id);
-                }, 1500);
-                
-                typingTimeoutsRef.current.set(msg.sender_id, timeout);
-              }
-            });
             return [...prev, ...newMsgs];
           }
           return prev;
@@ -174,9 +124,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       clearInterval(pollInterval);
       unsubMessages();
       unsubParticipants();
-      // Clear all typing timeouts
-      typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-      typingTimeoutsRef.current.clear();
     };
   }, [room.id, user?.id]);
 
@@ -212,14 +159,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       },
       onIncomingCall: (type) => {
         console.log('[ChatRoom] Incoming call of type:', type);
-        setCallType(type);
-        setInCall(true);
+        setIncomingCall({ type });
       },
       onCallEnded: () => {
         console.log('[ChatRoom] Call ended');
         localStreamRef.current = null;
         remoteStreamRef.current = null;
         setInCall(false);
+        setIncomingCall(null);
         setConnectionState('');
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
         if (localVideoRef.current) localVideoRef.current.srcObject = null;
@@ -351,6 +298,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const handleLeave = async () => {
     if (inCall) await hangUp();
     if (user?.id) {
+      try {
+        await sendMessage(room.id, user.id, displayName, `${displayName} left the room`, 'system');
+      } catch {
+        // Best-effort
+      }
       await leaveRoom(room.id, user.id);
       // If the current user is the host (creator), deactivate the room
       if (user.id === room.created_by) {
@@ -371,7 +323,32 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2000);
   };
+  // ── Share invite link ─────────────────────
+  const shareLink = () => {
+    const link = `${window.location.origin}?join=${room.code}`;
+    navigator.clipboard.writeText(link);
+    setShowLinkCopied(true);
+    setTimeout(() => setShowLinkCopied(false), 2000);
+  };
 
+  // ── Incoming call controls ────────────────
+  const acceptCall = async () => {
+    if (!incomingCall) return;
+    setCallType(incomingCall.type);
+    setInCall(true);
+    setIncomingCall(null);
+    try {
+      await webrtcRef.current?.acceptCall();
+    } catch (err) {
+      console.error('[ChatRoom] Failed to accept call:', err);
+      setInCall(false);
+    }
+  };
+
+  const rejectCall = async () => {
+    setIncomingCall(null);
+    await webrtcRef.current?.rejectCall();
+  };
   // ── Format timestamp ──────────────────────────
   const formatTime = (iso: string) => {
     const d = new Date(iso);
@@ -390,9 +367,28 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
           </button>
           <div className="chatroom-room-info">
             <h2 className="chatroom-room-name">{room.name || `Room ${room.code}`}</h2>
-            <span className="chatroom-participant-count">
-              {participants.length} participant{participants.length !== 1 ? 's' : ''}
-            </span>
+            <div
+              className="chatroom-participant-count-wrapper"
+              onMouseEnter={() => setShowParticipantsTooltip(true)}
+              onMouseLeave={() => setShowParticipantsTooltip(false)}
+            >
+              <span className="chatroom-participant-count">
+                {participants.length} participant{participants.length !== 1 ? 's' : ''}
+              </span>
+              {showParticipantsTooltip && participants.length > 0 && (
+                <div className="chatroom-participants-tooltip">
+                  <div className="chatroom-participants-tooltip-header">Active Participants</div>
+                  <div className="chatroom-participants-list">
+                    {participants.map((p) => (
+                      <div key={p.id} className="chatroom-participant-item">
+                        <span className="chatroom-participant-name">{p.display_name || 'User'}</span>
+                        <span className="chatroom-participant-status">Online</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -405,6 +401,15 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             </svg>
             <span>{room.code}</span>
             {showCopied && <span className="chatroom-copied-toast">Copied!</span>}
+          </button>
+
+          {/* Share invite link */}
+          <button className="chatroom-share-link-btn" onClick={shareLink} title="Copy invite link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            {showLinkCopied && <span className="chatroom-copied-toast">Link copied!</span>}
           </button>
 
           {/* Call buttons (disabled for guests) */}
@@ -540,6 +545,44 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         </div>
       )}
 
+      {/* ── Incoming call overlay ────────── */}
+      {incomingCall && !inCall && (
+        <div className="chatroom-incoming-call-overlay">
+          <div className="chatroom-incoming-call-card">
+            <div className="chatroom-incoming-call-icon">
+              {incomingCall.type === 'video' ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+              )}
+            </div>
+            <h3 className="chatroom-incoming-call-title">
+              Incoming {incomingCall.type} call
+            </h3>
+            <div className="chatroom-incoming-call-actions">
+              <button className="chatroom-incoming-accept" onClick={acceptCall}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                Accept
+              </button>
+              <button className="chatroom-incoming-reject" onClick={rejectCall}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                  <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55m-8-8A11 11 0 0 1 13 4" />
+                </svg>
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Messages ───────────────────── */}
       <div className="chatroom-messages">
         {messages.length === 0 && (
@@ -579,23 +622,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
               <div className="chatroom-msg-bubble">
                 <span className="chatroom-msg-text">{msg.content}</span>
                 <span className="chatroom-msg-time">{formatTime(msg.created_at)}</span>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Typing indicators */}
-        {Array.from(typingUsers).map((typingUserId) => {
-          const typingParticipant = participants.find((p) => p.user_id === typingUserId);
-          if (!typingParticipant || typingUserId === user?.id) return null;
-
-          return (
-            <div key={`typing-${typingUserId}`} className="chatroom-typing-msg">
-              <span className="chatroom-msg-sender">{typingParticipant.display_name || 'User'}</span>
-              <div className="chatroom-typing-indicator">
-                <div className="chatroom-typing-dot"></div>
-                <div className="chatroom-typing-dot"></div>
-                <div className="chatroom-typing-dot"></div>
               </div>
             </div>
           );

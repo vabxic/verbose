@@ -142,8 +142,9 @@
   justify-content: space-between;
   padding: 1.5rem 2rem;
   margin-bottom: 1.5rem;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  /* Make header fully transparent */
+  background: transparent;
+  border-bottom: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(16px);
   cursor: pointer;
@@ -167,7 +168,7 @@
   width: 48px;
   height: 48px;
   flex-shrink: 0;
-  display: flex;
+  background: transparent;
   align-items: center;
   justify-content: center;
   border-radius: 14px;
@@ -180,11 +181,13 @@
   height: 24px;
 }
 
-.home-find-people-left h3 {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 0.2rem;
+.home-nav-link:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: transparent;
+}
+.home-nav-link.active {
+  color: #fff;
+  background: transparent;
 }
 
 .home-find-people-left p {

@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Black circular background -->
+  <circle cx="256" cy="256" r="256" fill="#000000"></circle>
+
+  <!-- Straight geometric V -->
+  <path d="
+      M150 120
+      L256 392
+      L362 120
+      L322 120
+      L256 300
+      L190 120
+      Z
+    " fill="#FFFFFF"></path>
+</svg>
