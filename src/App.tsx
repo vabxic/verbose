@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useSpring, animated } from "@react-spring/web";
-import { Button, Text } from "@jamsr-ui/react";
+import { Text } from "@jamsr-ui/react";
 import styled from 'styled-components';
 const Threads = lazy(() => import("./components/Threads"));
 const SplashCursor = lazy(() => import("./components/SplashCursor"));

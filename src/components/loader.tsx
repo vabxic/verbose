@@ -1,4 +1,3 @@
-import React from 'react';
 import styled from 'styled-components';
 
 const Loader = () => {
@@ -24,7 +23,8 @@ const StyledWrapper = styled.div`
     margin-left: -80px;
     margin-top: -50px;
     border-radius: 5px;
-    background: #1e3f57;
+    background: #000000;
+    border: 3px solid #ffffff;
     animation: dot1_ 3s cubic-bezier(0.55,0.3,0.24,0.99) infinite;
   }
 
@@ -35,7 +35,7 @@ const StyledWrapper = styled.div`
     margin-top: -45px;
     margin-left: -75px;
     border-radius: 3px;
-    background: #3c517d;
+    background: #666666;
     animation-name: dot2_;
   }
 
@@ -46,7 +46,7 @@ const StyledWrapper = styled.div`
     margin-top: 50px;
     margin-left: -20px;
     border-radius: 0 0 5px 5px;
-    background: #6bb2cd;
+    background: #ffffff;
     animation-name: dot3_;
   }
 

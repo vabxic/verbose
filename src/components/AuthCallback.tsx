@@ -8,17 +8,23 @@ export const AuthCallback: React.FC = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Use getSessionFromUrl which parses the redirect URL and
-        // uses the stored PKCE code_verifier automatically.
-        const { data, error } = await supabase.auth.getSessionFromUrl({
-          storeSession: true,
-        });
+        // exchangeCodeForSession handles the PKCE redirect flow,
+        // extracting the code from the URL hash/query automatically.
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        const code = queryParams.get('code') || hashParams.get('code');
 
-        if (error) {
-          console.error('Auth callback error:', error);
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error('Auth callback error:', error);
+          } else {
+            console.log('Auth callback succeeded:', data);
+          }
         } else {
-          // Optionally inspect session/user
-          console.log('Auth callback succeeded:', data);
+          // No code found – try getSession as fallback (implicit flow)
+          const { error } = await supabase.auth.getSession();
+          if (error) console.error('Auth callback error:', error);
         }
       } catch (error) {
         console.error('Error handling auth callback:', error);
