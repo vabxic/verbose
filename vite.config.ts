@@ -6,8 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: "0.0.0.0",
-    allowedHosts: [
-      ".trycloudflare.com", // allow Cloudflare Tunnel domains
-    ],
+    port: 5173,
+    strictPort: false,
+  },
+  build: {
+    outDir: "dist",
+    sourcemap: false,
   },
 });

@@ -1,0 +1,11 @@
+{
+  "buildCommand": "pnpm run build",
+  "devCommand": "pnpm run dev",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "env": {
+    "VITE_SUPABASE_URL": "https://qlyppnnmrmocfhpnskpn.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_6k9muxudF_CUK9Dq09yMoQ_-2JPoqvN"
+  }
+}
