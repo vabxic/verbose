@@ -193,10 +193,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         // Try to attach to video element (for video calls)
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
+          remoteVideoRef.current.play().catch(() => {});
         }
         // Try to attach to audio element (for audio calls)
         if (remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = stream;
+          remoteAudioRef.current.play().catch(() => {});
         }
         setInCall(true);
       },
@@ -205,6 +207,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         localStreamRef.current = stream;
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(() => {});
         }
       },
       onIncomingCall: (type) => {
@@ -247,16 +250,19 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
           if (localVideoRef.current && localStreamRef.current) {
             console.log('[ChatRoom] Attaching local stream to video element');
             localVideoRef.current.srcObject = localStreamRef.current;
+            localVideoRef.current.play().catch(() => {});
           }
           if (remoteVideoRef.current && remoteStreamRef.current) {
             console.log('[ChatRoom] Attaching remote stream to video element');
             remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            remoteVideoRef.current.play().catch(() => {});
           }
         } else {
           // Audio call - attach remote stream to audio element
           if (remoteAudioRef.current && remoteStreamRef.current) {
             console.log('[ChatRoom] Attaching remote stream to audio element');
             remoteAudioRef.current.srcObject = remoteStreamRef.current;
+            remoteAudioRef.current.play().catch(() => {});
           }
         }
       }, 50);
@@ -344,7 +350,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   // ── Leave room ────────────────────────────────
   const handleLeave = async () => {
     if (inCall) await hangUp();
-    if (user?.id) await leaveRoom(room.id, user.id);
+    if (user?.id) {
+      await leaveRoom(room.id, user.id);
+      // If the current user is the host (creator), deactivate the room
+      if (user.id === room.created_by) {
+        try {
+          const { supabase } = await import('../lib/supabase');
+          await supabase.from('rooms').update({ is_active: false }).eq('id', room.id);
+        } catch (err) {
+          console.warn('[ChatRoom] Could not deactivate room:', err);
+        }
+      }
+    }
     onLeave();
   };
 

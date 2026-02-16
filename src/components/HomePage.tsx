@@ -10,17 +10,39 @@ import './HomePage.css';
 
 type View = 'home' | 'chat';
 
+const SESSION_ROOM_KEY = 'verbose_active_room';
+
 export const HomePage: React.FC = () => {
   const { user, isAnonymous, signOut } = useAuth();
   const [showLoginUpgrade, setShowLoginUpgrade] = useState(false);
-  const [activeView, setActiveView] = useState<View>('home');
-  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
+  const [activeView, setActiveView] = useState<View>(() => {
+    // Restore view from session if a room was previously active
+    const saved = sessionStorage.getItem(SESSION_ROOM_KEY);
+    return saved ? 'chat' : 'home';
+  });
+  const [activeRoom, setActiveRoom] = useState<Room | null>(() => {
+    // Restore active room from session storage on refresh
+    try {
+      const saved = sessionStorage.getItem(SESSION_ROOM_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [joinCode, setJoinCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [roomError, setRoomError] = useState('');
   const [showJoinModal, setShowJoinModal] = useState(false);
   const prevUserIdRef = useRef(user?.id);
+
+  const displayName = isAnonymous
+    ? 'Guest'
+    : user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      user?.user_metadata?.username ||
+      user?.email?.split('@')[0] ||
+      'User';
 
   // Close upgrade login when user identity changes (successful login/signup)
   useEffect(() => {
@@ -30,13 +52,28 @@ export const HomePage: React.FC = () => {
     prevUserIdRef.current = user?.id;
   }, [user?.id]);
 
-  const displayName = isAnonymous
-    ? 'Guest'
-    : user?.user_metadata?.full_name ||
-      user?.user_metadata?.name ||
-      user?.user_metadata?.username ||
-      user?.email?.split('@')[0] ||
-      'User';
+  // Persist active room to sessionStorage so it survives refresh
+  useEffect(() => {
+    if (activeRoom && activeView === 'chat') {
+      sessionStorage.setItem(SESSION_ROOM_KEY, JSON.stringify(activeRoom));
+    } else {
+      sessionStorage.removeItem(SESSION_ROOM_KEY);
+    }
+  }, [activeRoom, activeView]);
+
+  // Re-join room after refresh (re-upsert participant so we stay in the room)
+  useEffect(() => {
+    if (activeRoom && user?.id && activeView === 'chat') {
+      joinRoomByCode(activeRoom.code, user.id, displayName).catch((err) => {
+        console.warn('[HomePage] Could not re-join room after refresh:', err);
+        // Room may have been deactivated by host – go back to home
+        setActiveRoom(null);
+        setActiveView('home');
+        sessionStorage.removeItem(SESSION_ROOM_KEY);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Create a new room ────────────────────────
   const handleCreateRoom = async () => {
@@ -82,6 +119,7 @@ export const HomePage: React.FC = () => {
 
   // ── Leave room callback ──────────────────────
   const handleLeaveRoom = () => {
+    sessionStorage.removeItem(SESSION_ROOM_KEY);
     setActiveRoom(null);
     setActiveView('home');
   };

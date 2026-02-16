@@ -178,25 +178,26 @@
 
 /* ── Call overlay ───────────────────────────── */
 .chatroom-call-overlay {
-  position: relative;
-  flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: #000000;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.12);
+  z-index: 100;
 }
 
 .chatroom-call-overlay.video {
-  height: 45vh;
-  min-height: 300px;
-  max-height: 60vh;
+  /* fullscreen by default from the fixed positioning above */
 }
 
 .chatroom-call-overlay.audio {
-  height: 160px;
   justify-content: center;
   gap: 1rem;
   flex-direction: row;
@@ -216,22 +217,22 @@
 .chatroom-remote-video {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   background: #000;
 }
 
 .chatroom-local-video {
   position: absolute;
-  bottom: 14px;
-  right: 14px;
-  width: 140px;
+  bottom: 80px;
+  right: 16px;
+  width: 120px;
   height: auto;
-  max-height: 140px;
+  max-height: 160px;
   aspect-ratio: auto;
-  border-radius: 12px;
-  object-fit: contain;
+  border-radius: 14px;
+  object-fit: cover;
   background: #1a1a2e;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
   z-index: 3;
   transition: all 0.3s ease;
@@ -606,17 +607,7 @@
   background: rgba(30, 30, 40, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
-  animation: typingGlow 2s ease-in-out infinite;
   max-width: 60px;
-}
-
-@keyframes typingGlow {
-  0%, 100% {
-    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
-  }
-  50% {
-    box-shadow: 0 2px 20px rgba(255, 255, 255, 0.25);
-  }
 }
 
 .chatroom-typing-dot {
@@ -624,26 +615,7 @@
   height: 8px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
-  animation: wavyBounce 1.4s infinite;
-}
-
-.chatroom-typing-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.chatroom-typing-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes wavyBounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.7;
-  }
-  30% {
-    transform: translateY(-10px);
-    opacity: 1;
-  }
+  animation: none;
 }
 
 .chatroom-typing-msg {
@@ -766,14 +738,13 @@
   }
 
   .chatroom-call-overlay.video {
-    height: 50vh;
-    min-height: 240px;
+    /* fullscreen via fixed positioning */
   }
 
   .chatroom-local-video {
     width: 100px;
-    max-height: 120px;
-    bottom: 10px;
+    max-height: 130px;
+    bottom: 80px;
     right: 10px;
   }
 
@@ -841,14 +812,13 @@
   }
 
   .chatroom-call-overlay.video {
-    height: 55vh;
-    min-height: 200px;
+    /* fullscreen via fixed positioning */
   }
 
   .chatroom-local-video {
     width: 80px;
     max-height: 100px;
-    bottom: 8px;
+    bottom: 76px;
     right: 8px;
   }
 

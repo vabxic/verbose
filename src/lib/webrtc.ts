@@ -73,8 +73,14 @@ export class WebRTCService {
     if (this.localStream) return this.localStream;
 
     this.localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: callType === 'video',
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      video: callType === 'video'
+        ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+        : false,
     });
     return this.localStream;
   }
@@ -186,7 +192,7 @@ export class WebRTCService {
       pc.addTrack(track, stream);
     });
 
-    const offer = await pc.createOffer();
+    const offer = await pc.createOffer({ iceRestart: true });
     await pc.setLocalDescription(offer);
 
     await sendSignal(this.roomId, this.userId, 'offer', {

@@ -67,6 +67,7 @@ export async function createRoom(
         code,
         name: name || `Room ${code}`,
         created_by: userId,
+        max_participants: 50,
       })
       .select()
       .single();
