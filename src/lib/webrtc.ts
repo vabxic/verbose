@@ -10,6 +10,22 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun2.l.google.com:19302' },
   { urls: 'stun:stun3.l.google.com:19302' },
   { urls: 'stun:stun4.l.google.com:19302' },
+  // Free TURN relay servers for NAT traversal
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
 ];
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -21,14 +37,26 @@ export type CallType = 'audio' | 'video';
 
 export interface WebRTCCallbacks {
   onRemoteStream: (stream: MediaStream) => void;
+  /** Fired when the local camera/mic stream is acquired (for both caller & callee) */
+  onLocalStream: (stream: MediaStream) => void;
   onCallEnded: () => void;
   onConnectionStateChange: (state: RTCPeerConnectionState) => void;
+  /** Fired on the callee side when an incoming call is detected */
+  onIncomingCall?: (callType: CallType) => void;
 }
 
 export class WebRTCService {
   private pc: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private unsubSignals: (() => void) | null = null;
+
+  // ICE candidate buffering – candidates that arrive before remoteDescription is set
+  private pendingCandidates: RTCIceCandidateInit[] = [];
+  private hasRemoteDescription = false;
+
+  // Signal processing queue to prevent race conditions
+  private signalQueue: RoomSignal[] = [];
+  private processingSignal = false;
 
   private roomId: string;
   private userId: string;
@@ -57,10 +85,15 @@ export class WebRTCService {
       this.pc.close();
     }
 
+    // Reset ICE buffering state for new connection
+    this.pendingCandidates = [];
+    this.hasRemoteDescription = false;
+
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('[WebRTC] Sending ICE candidate');
         sendSignal(this.roomId, this.userId, 'ice-candidate', {
           candidate: event.candidate.toJSON(),
         });
@@ -68,14 +101,21 @@ export class WebRTCService {
     };
 
     pc.ontrack = (event) => {
+      console.log('[WebRTC] Remote track received:', event.track.kind);
       if (event.streams[0]) {
         this.callbacks.onRemoteStream(event.streams[0]);
       }
     };
 
+    pc.oniceconnectionstatechange = () => {
+      console.log('[WebRTC] ICE connection state:', pc.iceConnectionState);
+    };
+
     pc.onconnectionstatechange = () => {
+      console.log('[WebRTC] Connection state:', pc.connectionState);
       this.callbacks.onConnectionStateChange(pc.connectionState);
-      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+      // Only end on 'failed' – 'disconnected' is often temporary and may reconnect
+      if (pc.connectionState === 'failed') {
         this.callbacks.onCallEnded();
       }
     };
@@ -89,12 +129,35 @@ export class WebRTCService {
     this.unsubSignals = subscribeToSignals(
       this.roomId,
       this.userId,
-      (signal) => this.handleSignal(signal),
+      (signal) => this.enqueueSignal(signal),
     );
+  }
+
+  // ── Signal queue – ensures signals are processed one at a time ──
+  private enqueueSignal(signal: RoomSignal): void {
+    this.signalQueue.push(signal);
+    this.processSignalQueue();
+  }
+
+  private async processSignalQueue(): Promise<void> {
+    if (this.processingSignal) return;
+    this.processingSignal = true;
+
+    while (this.signalQueue.length > 0) {
+      const signal = this.signalQueue.shift()!;
+      try {
+        await this.handleSignal(signal);
+      } catch (err) {
+        console.error('[WebRTC] Error processing signal:', signal.type, err);
+      }
+    }
+
+    this.processingSignal = false;
   }
 
   // ── Handle incoming signals ─────────────────
   private async handleSignal(signal: RoomSignal): Promise<void> {
+    console.log('[WebRTC] Handling signal:', signal.type);
     switch (signal.type) {
       case 'offer':
         await this.handleOffer(signal);
@@ -115,6 +178,9 @@ export class WebRTCService {
   async startCall(callType: CallType): Promise<void> {
     const stream = await this.getLocalStream(callType);
     const pc = this.createPeerConnection();
+
+    // Notify UI about local stream (caller side)
+    this.callbacks.onLocalStream(stream);
 
     stream.getTracks().forEach((track) => {
       pc.addTrack(track, stream);
@@ -137,6 +203,10 @@ export class WebRTCService {
     const stream = await this.getLocalStream(payload.callType);
     const pc = this.createPeerConnection();
 
+    // Notify UI about local stream and incoming call type (callee side)
+    this.callbacks.onLocalStream(stream);
+    this.callbacks.onIncomingCall?.(payload.callType);
+
     stream.getTracks().forEach((track) => {
       pc.addTrack(track, stream);
     });
@@ -144,6 +214,10 @@ export class WebRTCService {
     await pc.setRemoteDescription(
       new RTCSessionDescription({ sdp: payload.sdp, type: payload.type }),
     );
+
+    // Remote description is set – flush buffered ICE candidates
+    this.hasRemoteDescription = true;
+    await this.flushPendingCandidates();
 
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
@@ -164,16 +238,42 @@ export class WebRTCService {
     await this.pc.setRemoteDescription(
       new RTCSessionDescription({ sdp: payload.sdp, type: payload.type }),
     );
+
+    // Remote description is set – flush buffered ICE candidates
+    this.hasRemoteDescription = true;
+    await this.flushPendingCandidates();
   }
 
   // ── Handle ICE candidate ────────────────────
   private async handleIceCandidate(signal: RoomSignal): Promise<void> {
     const payload = signal.payload as { candidate: RTCIceCandidateInit };
-    if (!this.pc) return;
+
+    // Buffer if peer connection or remote description not ready yet
+    if (!this.pc || !this.hasRemoteDescription) {
+      console.log('[WebRTC] Buffering ICE candidate (PC or remote desc not ready)');
+      this.pendingCandidates.push(payload.candidate);
+      return;
+    }
+
     try {
       await this.pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
     } catch (err) {
-      console.warn('Error adding ICE candidate:', err);
+      console.warn('[WebRTC] Error adding ICE candidate:', err);
+    }
+  }
+
+  // ── Flush buffered ICE candidates ───────────
+  private async flushPendingCandidates(): Promise<void> {
+    if (!this.pc || this.pendingCandidates.length === 0) return;
+    console.log('[WebRTC] Flushing', this.pendingCandidates.length, 'buffered ICE candidates');
+    const candidates = [...this.pendingCandidates];
+    this.pendingCandidates = [];
+    for (const candidate of candidates) {
+      try {
+        await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn('[WebRTC] Error adding buffered ICE candidate:', err);
+      }
     }
   }
 
@@ -203,6 +303,11 @@ export class WebRTCService {
 
     this.pc?.close();
     this.pc = null;
+
+    this.pendingCandidates = [];
+    this.hasRemoteDescription = false;
+    this.signalQueue = [];
+    this.processingSignal = false;
 
     this.unsubSignals?.();
     this.unsubSignals = null;

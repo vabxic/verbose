@@ -7,6 +7,7 @@ import {
   leaveRoom,
   subscribeToMessages,
   subscribeToParticipants,
+  cleanOldSignals,
 } from '../lib/rooms';
 import type { Room, RoomMessage, RoomParticipant } from '../lib/rooms';
 import { WebRTCService } from '../lib/webrtc';
@@ -38,6 +39,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const webrtcRef = useRef<WebRTCService | null>(null);
 
+  // Store streams in refs so they persist across renders / DOM changes
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+
   const displayName =
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
@@ -50,12 +55,19 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     if (!room.id || !user?.id) return;
 
     (async () => {
-      const [msgs, parts] = await Promise.all([
-        getMessages(room.id),
-        getRoomParticipants(room.id),
-      ]);
-      setMessages(msgs);
-      setParticipants(parts);
+      try {
+        console.log('[ChatRoom] Loading initial data for room:', room.id);
+        const [msgs, parts] = await Promise.all([
+          getMessages(room.id),
+          getRoomParticipants(room.id),
+        ]);
+        console.log('[ChatRoom] Initial messages loaded:', msgs.length, msgs);
+        console.log('[ChatRoom] Initial participants loaded:', parts.length, parts);
+        setMessages(msgs);
+        setParticipants(parts);
+      } catch (error) {
+        console.error('[ChatRoom] Error loading initial data:', error);
+      }
     })();
   }, [room.id, user?.id]);
 
@@ -63,19 +75,48 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   useEffect(() => {
     if (!room.id || !user?.id) return;
 
+    console.log('[ChatRoom] Setting up realtime subscriptions for room:', room.id);
+
     const unsubMessages = subscribeToMessages(room.id, (msg) => {
+      console.log('[ChatRoom] Received realtime message:', msg);
       setMessages((prev) => {
         // Deduplicate
-        if (prev.some((m) => m.id === msg.id)) return prev;
+        if (prev.some((m) => m.id === msg.id)) {
+          console.log('[ChatRoom] Message already exists, skipping:', msg.id);
+          return prev;
+        }
+        console.log('[ChatRoom] Adding new message to state');
         return [...prev, msg];
       });
     });
 
     const unsubParticipants = subscribeToParticipants(room.id, (parts) => {
+      console.log('[ChatRoom] Participants updated:', parts.length, parts);
       setParticipants(parts);
     });
 
+    // Fallback polling: fetch messages every 3s in case realtime is not working
+    const pollInterval = setInterval(async () => {
+      try {
+        const msgs = await getMessages(room.id);
+        setMessages((prev) => {
+          // Merge: keep existing, add any new ones
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMsgs = msgs.filter((m) => !existingIds.has(m.id));
+          if (newMsgs.length > 0) {
+            console.log('[ChatRoom] Poll found', newMsgs.length, 'new messages');
+            return [...prev, ...newMsgs];
+          }
+          return prev;
+        });
+      } catch {
+        // Silently ignore polling errors
+      }
+    }, 3000);
+
     return () => {
+      console.log('[ChatRoom] Cleaning up realtime subscriptions');
+      clearInterval(pollInterval);
       unsubMessages();
       unsubParticipants();
     };
@@ -85,20 +126,40 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   useEffect(() => {
     if (!room.id || !user?.id) return;
 
+    console.log('[ChatRoom] Initializing WebRTC service for room:', room.id);
+
     const rtc = new WebRTCService(room.id, user.id, {
       onRemoteStream: (stream) => {
+        console.log('[ChatRoom] Received remote stream, tracks:', stream.getTracks().length);
+        remoteStreamRef.current = stream;
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
         }
         setInCall(true);
       },
+      onLocalStream: (stream) => {
+        console.log('[ChatRoom] Local stream ready, tracks:', stream.getTracks().length);
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      },
+      onIncomingCall: (type) => {
+        console.log('[ChatRoom] Incoming call of type:', type);
+        setCallType(type);
+        setInCall(true);
+      },
       onCallEnded: () => {
+        console.log('[ChatRoom] Call ended');
+        localStreamRef.current = null;
+        remoteStreamRef.current = null;
         setInCall(false);
         setConnectionState('');
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
         if (localVideoRef.current) localVideoRef.current.srcObject = null;
       },
       onConnectionStateChange: (state) => {
+        console.log('[ChatRoom] Connection state changed:', state);
         setConnectionState(state);
       },
     });
@@ -107,10 +168,29 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     webrtcRef.current = rtc;
 
     return () => {
+      console.log('[ChatRoom] Cleaning up WebRTC service');
       rtc.cleanup();
       webrtcRef.current = null;
     };
   }, [room.id, user?.id]);
+
+  // ── Attach stored streams to video elements when they mount ──
+  useEffect(() => {
+    if (inCall) {
+      // Small delay to ensure refs are attached after render
+      const timer = setTimeout(() => {
+        if (localVideoRef.current && localStreamRef.current) {
+          console.log('[ChatRoom] Attaching local stream to video element');
+          localVideoRef.current.srcObject = localStreamRef.current;
+        }
+        if (remoteVideoRef.current && remoteStreamRef.current) {
+          console.log('[ChatRoom] Attaching remote stream to video element');
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [inCall]);
 
   // ── Auto-scroll messages ──────────────────────
   useEffect(() => {
@@ -121,11 +201,20 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || !user?.id || isSending) return;
     setIsSending(true);
+    const content = inputValue.trim();
+    console.log('[ChatRoom] Sending message:', { roomId: room.id, userId: user.id, content });
     try {
-      await sendMessage(room.id, user.id, displayName, inputValue.trim());
+      const result = await sendMessage(room.id, user.id, displayName, content);
+      console.log('[ChatRoom] Message sent successfully:', result);
+      // Optimistic update: add to local state immediately (dedup prevents doubles from realtime)
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === result.id)) return prev;
+        return [...prev, result];
+      });
       setInputValue('');
     } catch (err) {
-      console.error('Failed to send message:', err);
+      console.error('[ChatRoom] Failed to send message:', err);
+      alert('Failed to send message: ' + (err as Error).message);
     } finally {
       setIsSending(false);
     }
@@ -141,21 +230,26 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   // ── Call controls ─────────────────────────────
   const startCall = async (type: CallType) => {
     if (isAnonymous) return;
+    console.log('[ChatRoom] Starting', type, 'call');
     setCallType(type);
+    setInCall(true); // Show UI immediately so video refs mount
     try {
-      const stream = await webrtcRef.current?.getLocalStream(type);
-      if (stream && localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
+      // Clean old signals to prevent stale offer/answer confusion
+      await cleanOldSignals(room.id);
+      // startCall internally acquires the local stream and fires onLocalStream callback
       await webrtcRef.current?.startCall(type);
-      setInCall(true);
+      console.log('[ChatRoom] Call started successfully');
     } catch (err) {
-      console.error('Failed to start call:', err);
+      console.error('[ChatRoom] Failed to start call:', err);
+      setInCall(false);
+      alert('Failed to start call: ' + (err as Error).message);
     }
   };
 
   const hangUp = async () => {
     await webrtcRef.current?.hangUp();
+    localStreamRef.current = null;
+    remoteStreamRef.current = null;
     setInCall(false);
     setConnectionState('');
     if (localVideoRef.current) localVideoRef.current.srcObject = null;

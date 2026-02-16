@@ -203,6 +203,7 @@
   background: #1a1a2e;
   border: 2px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 3;
 }
 
 .chatroom-call-overlay.audio .chatroom-call-videos {

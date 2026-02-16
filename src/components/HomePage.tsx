@@ -63,14 +63,17 @@ export const HomePage: React.FC = () => {
     if (!user?.id || !joinCode.trim() || isJoining) return;
     setIsJoining(true);
     setRoomError('');
+    console.log('[HomePage] Attempting to join room:', joinCode.trim(), 'user:', user.id);
     try {
       const { room } = await joinRoomByCode(joinCode.trim(), user.id, displayName);
+      console.log('[HomePage] Successfully joined room:', room);
       await sendMessage(room.id, user.id, displayName, `${displayName} joined the room`, 'system');
       setActiveRoom(room);
       setActiveView('chat');
       setShowJoinModal(false);
       setJoinCode('');
     } catch (err: unknown) {
+      console.error('[HomePage] Failed to join room:', err);
       setRoomError(err instanceof Error ? err.message : 'Failed to join room');
     } finally {
       setIsJoining(false);

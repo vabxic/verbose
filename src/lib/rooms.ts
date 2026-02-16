@@ -86,6 +86,7 @@ export async function joinRoomByCode(
   userId: string,
   displayName: string,
 ): Promise<{ room: Room; participant: RoomParticipant }> {
+  console.log('[rooms] Joining room by code:', code, 'user:', userId, 'name:', displayName);
   // Find the room
   const { data: room, error: roomErr } = await supabase
     .from('rooms')
@@ -94,11 +95,15 @@ export async function joinRoomByCode(
     .eq('is_active', true)
     .single();
 
+  console.log('[rooms] Room lookup result:', { room, error: roomErr });
+
   if (roomErr || !room) {
+    console.error('[rooms] Room not found:', roomErr);
     throw new Error('Room not found or no longer active.');
   }
 
   // Upsert participant
+  console.log('[rooms] Upserting participant...');
   const { data: participant, error: partErr } = await supabase
     .from('room_participants')
     .upsert(
@@ -108,8 +113,14 @@ export async function joinRoomByCode(
     .select()
     .single();
 
-  if (partErr) throw partErr;
+  console.log('[rooms] Participant upsert result:', { participant, error: partErr });
 
+  if (partErr) {
+    console.error('[rooms] Failed to add participant:', partErr);
+    throw partErr;
+  }
+
+  console.log('[rooms] Successfully joined room');
   return { room: room as Room, participant: participant as RoomParticipant };
 }
 
@@ -141,13 +152,18 @@ export async function sendMessage(
   content: string,
   type: 'text' | 'system' = 'text',
 ): Promise<RoomMessage> {
+  console.log('[rooms] Sending message:', { roomId, senderId, senderName, content, type });
   const { data, error } = await supabase
     .from('room_messages')
     .insert({ room_id: roomId, sender_id: senderId, sender_name: senderName, content, type })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('[rooms] Error sending message:', error);
+    throw error;
+  }
+  console.log('[rooms] Message sent successfully:', data);
   return data as RoomMessage;
 }
 
@@ -155,6 +171,7 @@ export async function getMessages(
   roomId: string,
   limit = 100,
 ): Promise<RoomMessage[]> {
+  console.log('[rooms] Loading messages for room:', roomId);
   const { data, error } = await supabase
     .from('room_messages')
     .select('*')
@@ -162,11 +179,29 @@ export async function getMessages(
     .order('created_at', { ascending: true })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    console.error('[rooms] Error loading messages:', error);
+    throw error;
+  }
+  console.log('[rooms] Loaded', data?.length || 0, 'messages');
   return (data ?? []) as RoomMessage[];
 }
 
 // ── Signaling (WebRTC) ──────────────────────────
+
+/** Delete old signals for a room to prevent stale offer/answer confusion */
+export async function cleanOldSignals(roomId: string): Promise<void> {
+  console.log('[rooms] Cleaning old signals for room:', roomId);
+  const { error } = await supabase
+    .from('room_signals')
+    .delete()
+    .eq('room_id', roomId);
+
+  if (error) {
+    // Non-fatal – RLS may prevent deleting other users' signals
+    console.warn('[rooms] Could not clean old signals:', error.message);
+  }
+}
 
 export async function sendSignal(
   roomId: string,
@@ -194,6 +229,7 @@ export function subscribeToMessages(
   roomId: string,
   onMessage: (msg: RoomMessage) => void,
 ) {
+  console.log('[rooms] Setting up message subscription for room:', roomId);
   const channel = supabase
     .channel(`room-messages-${roomId}`)
     .on(
@@ -205,12 +241,16 @@ export function subscribeToMessages(
         filter: `room_id=eq.${roomId}`,
       },
       (payload) => {
+        console.log('[rooms] Received realtime message event:', payload);
         onMessage(payload.new as RoomMessage);
       },
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log('[rooms] Message subscription status:', status);
+    });
 
   return () => {
+    console.log('[rooms] Unsubscribing from messages');
     supabase.removeChannel(channel);
   };
 }
@@ -220,6 +260,7 @@ export function subscribeToSignals(
   currentUserId: string,
   onSignal: (signal: RoomSignal) => void,
 ) {
+  console.log('[rooms] Setting up signal subscription for room:', roomId, 'user:', currentUserId);
   const channel = supabase
     .channel(`room-signals-${roomId}`)
     .on(
@@ -232,15 +273,26 @@ export function subscribeToSignals(
       },
       (payload) => {
         const signal = payload.new as RoomSignal;
+        console.log('[rooms] Received signal:', signal);
         // Ignore own signals and signals not targeted at us
-        if (signal.sender_id === currentUserId) return;
-        if (signal.target_id && signal.target_id !== currentUserId) return;
+        if (signal.sender_id === currentUserId) {
+          console.log('[rooms] Ignoring own signal');
+          return;
+        }
+        if (signal.target_id && signal.target_id !== currentUserId) {
+          console.log('[rooms] Signal not targeted at us, ignoring');
+          return;
+        }
+        console.log('[rooms] Processing signal');
         onSignal(signal);
       },
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log('[rooms] Signal subscription status:', status);
+    });
 
   return () => {
+    console.log('[rooms] Unsubscribing from signals');
     supabase.removeChannel(channel);
   };
 }
