@@ -36,6 +36,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [showCopied, setShowCopied] = useState(false);
   const [showLinkCopied, setShowLinkCopied] = useState(false);
   const [incomingCall, setIncomingCall] = useState<{ type: CallType } | null>(null);
+  const [lineBusyError, setLineBusyError] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -255,6 +256,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   // ── Call controls ─────────────────────────────
   const startCall = async (type: CallType) => {
     if (isAnonymous) return;
+    // Check if there's an incoming call - both people trying to call at same time
+    if (incomingCall) {
+      setLineBusyError(true);
+      setTimeout(() => setLineBusyError(false), 3000);
+      return;
+    }
     console.log('[ChatRoom] Starting', type, 'call');
     setCallType(type);
     setInCall(true); // Show UI immediately so video refs mount
@@ -572,13 +579,28 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                 Accept
               </button>
               <button className="chatroom-incoming-reject" onClick={rejectCall}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
                   <line x1="1" y1="1" x2="23" y2="23" />
-                  <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55m-8-8A11 11 0 0 1 13 4" />
                 </svg>
                 Reject
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Line Busy Error Modal ──────── */}
+      {lineBusyError && (
+        <div className="chatroom-line-busy-overlay">
+          <div className="chatroom-line-busy-card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <h3>Line Busy</h3>
+            <p>The other person is calling. Please accept or reject their call first.</p>
           </div>
         </div>
       )}

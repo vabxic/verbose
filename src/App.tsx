@@ -249,6 +249,17 @@ function App() {
     setShowLogin(true);
   };
 
+  // Check for room join code in URL and auto-open login if not authenticated
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const joinCode = params.get('join');
+    
+    // If there's a join code and user is not logged in, show login
+    if (joinCode && !user && !loading) {
+      setShowLogin(true);
+    }
+  }, [user, loading]);
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
