@@ -25,6 +25,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [participants, setParticipants] = useState<RoomParticipant[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
   // Call state
   const [inCall, setInCall] = useState(false);
@@ -36,8 +37,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const webrtcRef = useRef<WebRTCService | null>(null);
+  const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Store streams in refs so they persist across renders / DOM changes
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -79,6 +82,33 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
     const unsubMessages = subscribeToMessages(room.id, (msg) => {
       console.log('[ChatRoom] Received realtime message:', msg);
+      
+      // Show typing indicator for other users briefly before they send a message
+      if (msg.sender_id !== user.id && msg.type !== 'system') {
+        setTypingUsers((prev) => {
+          const updated = new Set(prev);
+          updated.add(msg.sender_id);
+          return updated;
+        });
+        
+        // Clear typing indicator timeout for this user if exists
+        if (typingTimeoutsRef.current.has(msg.sender_id)) {
+          clearTimeout(typingTimeoutsRef.current.get(msg.sender_id)!);
+        }
+        
+        // Clear typing indicator after delay
+        const timeout = setTimeout(() => {
+          setTypingUsers((prev) => {
+            const updated = new Set(prev);
+            updated.delete(msg.sender_id);
+            return updated;
+          });
+          typingTimeoutsRef.current.delete(msg.sender_id);
+        }, 1500);
+        
+        typingTimeoutsRef.current.set(msg.sender_id, timeout);
+      }
+      
       setMessages((prev) => {
         // Deduplicate
         if (prev.some((m) => m.id === msg.id)) {
@@ -105,6 +135,31 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
           const newMsgs = msgs.filter((m) => !existingIds.has(m.id));
           if (newMsgs.length > 0) {
             console.log('[ChatRoom] Poll found', newMsgs.length, 'new messages');
+            // Show typing for new messages from other users
+            newMsgs.forEach((msg) => {
+              if (msg.sender_id !== user.id && msg.type !== 'system') {
+                setTypingUsers((prev) => {
+                  const updated = new Set(prev);
+                  updated.add(msg.sender_id);
+                  return updated;
+                });
+                
+                if (typingTimeoutsRef.current.has(msg.sender_id)) {
+                  clearTimeout(typingTimeoutsRef.current.get(msg.sender_id)!);
+                }
+                
+                const timeout = setTimeout(() => {
+                  setTypingUsers((prev) => {
+                    const updated = new Set(prev);
+                    updated.delete(msg.sender_id);
+                    return updated;
+                  });
+                  typingTimeoutsRef.current.delete(msg.sender_id);
+                }, 1500);
+                
+                typingTimeoutsRef.current.set(msg.sender_id, timeout);
+              }
+            });
             return [...prev, ...newMsgs];
           }
           return prev;
@@ -119,6 +174,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       clearInterval(pollInterval);
       unsubMessages();
       unsubParticipants();
+      // Clear all typing timeouts
+      typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
     };
   }, [room.id, user?.id]);
 
@@ -132,8 +190,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       onRemoteStream: (stream) => {
         console.log('[ChatRoom] Received remote stream, tracks:', stream.getTracks().length);
         remoteStreamRef.current = stream;
+        // Try to attach to video element (for video calls)
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
+        }
+        // Try to attach to audio element (for audio calls)
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = stream;
         }
         setInCall(true);
       },
@@ -157,6 +220,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         setConnectionState('');
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
         if (localVideoRef.current) localVideoRef.current.srcObject = null;
+        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
       },
       onConnectionStateChange: (state) => {
         console.log('[ChatRoom] Connection state changed:', state);
@@ -174,23 +238,31 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     };
   }, [room.id, user?.id]);
 
-  // ── Attach stored streams to video elements when they mount ──
+  // ── Attach stored streams to video/audio elements when they mount ──
   useEffect(() => {
     if (inCall) {
       // Small delay to ensure refs are attached after render
       const timer = setTimeout(() => {
-        if (localVideoRef.current && localStreamRef.current) {
-          console.log('[ChatRoom] Attaching local stream to video element');
-          localVideoRef.current.srcObject = localStreamRef.current;
-        }
-        if (remoteVideoRef.current && remoteStreamRef.current) {
-          console.log('[ChatRoom] Attaching remote stream to video element');
-          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        if (callType === 'video') {
+          if (localVideoRef.current && localStreamRef.current) {
+            console.log('[ChatRoom] Attaching local stream to video element');
+            localVideoRef.current.srcObject = localStreamRef.current;
+          }
+          if (remoteVideoRef.current && remoteStreamRef.current) {
+            console.log('[ChatRoom] Attaching remote stream to video element');
+            remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          }
+        } else {
+          // Audio call - attach remote stream to audio element
+          if (remoteAudioRef.current && remoteStreamRef.current) {
+            console.log('[ChatRoom] Attaching remote stream to audio element');
+            remoteAudioRef.current.srcObject = remoteStreamRef.current;
+          }
         }
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [inCall]);
+  }, [inCall, callType]);
 
   // ── Auto-scroll messages ──────────────────────
   useEffect(() => {
@@ -254,6 +326,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     setConnectionState('');
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
   };
 
   const toggleAudio = () => {
@@ -349,21 +422,47 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       {/* ── Video call overlay ─────────── */}
       {inCall && (
         <div className={`chatroom-call-overlay ${callType}`}>
-          <div className="chatroom-call-videos">
-            <video
-              ref={remoteVideoRef}
-              className="chatroom-remote-video"
-              autoPlay
-              playsInline
-            />
-            <video
-              ref={localVideoRef}
-              className="chatroom-local-video"
-              autoPlay
-              playsInline
-              muted
-            />
-          </div>
+          {callType === 'video' ? (
+            <div className="chatroom-call-videos">
+              <video
+                ref={remoteVideoRef}
+                className="chatroom-remote-video"
+                autoPlay
+                playsInline
+              />
+              <video
+                ref={localVideoRef}
+                className="chatroom-local-video"
+                autoPlay
+                playsInline
+                muted
+              />
+            </div>
+          ) : (
+            <div className="chatroom-audio-visual">
+              <div className="chatroom-audio-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              </div>
+              <div className="chatroom-audio-waves">
+                <div className="chatroom-audio-wave"></div>
+                <div className="chatroom-audio-wave"></div>
+                <div className="chatroom-audio-wave"></div>
+                <div className="chatroom-audio-wave"></div>
+                <div className="chatroom-audio-wave"></div>
+              </div>
+              {/* Hidden audio element for audio-only calls */}
+              <audio
+                ref={remoteAudioRef}
+                autoPlay
+                style={{ display: 'none' }}
+              />
+            </div>
+          )}
 
           <div className="chatroom-call-status">
             {connectionState === 'connecting' && 'Connecting…'}
@@ -418,7 +517,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             <button className="chatroom-call-btn hangup" onClick={hangUp} title="End call">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91" />
-                <line x1="23" y1="1" x2="1" y2="23" />
               </svg>
             </button>
           </div>
@@ -468,6 +566,24 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             </div>
           );
         })}
+
+        {/* Typing indicators */}
+        {Array.from(typingUsers).map((typingUserId) => {
+          const typingParticipant = participants.find((p) => p.user_id === typingUserId);
+          if (!typingParticipant || typingUserId === user?.id) return null;
+
+          return (
+            <div key={`typing-${typingUserId}`} className="chatroom-typing-msg">
+              <span className="chatroom-msg-sender">{typingParticipant.display_name || 'User'}</span>
+              <div className="chatroom-typing-indicator">
+                <div className="chatroom-typing-dot"></div>
+                <div className="chatroom-typing-dot"></div>
+                <div className="chatroom-typing-dot"></div>
+              </div>
+            </div>
+          );
+        })}
+
         <div ref={messagesEndRef} />
       </div>
 
