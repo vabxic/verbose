@@ -3,11 +3,23 @@ import { useAuth } from '../providers/auth';
 import { Logo } from './Logo';
 import ProfileAvatar from './ProfileAvatar';
 import LoginPage from './LoginPage';
+import ChatRoom from './ChatRoom';
+import { createRoom, joinRoomByCode, sendMessage } from '../lib/rooms';
+import type { Room } from '../lib/rooms';
 import './HomePage.css';
+
+type View = 'home' | 'chat';
 
 export const HomePage: React.FC = () => {
   const { user, isAnonymous, signOut } = useAuth();
   const [showLoginUpgrade, setShowLoginUpgrade] = useState(false);
+  const [activeView, setActiveView] = useState<View>('home');
+  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
+  const [joinCode, setJoinCode] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [roomError, setRoomError] = useState('');
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const prevUserIdRef = useRef(user?.id);
 
   // Close upgrade login when user identity changes (successful login/signup)
@@ -26,13 +38,99 @@ export const HomePage: React.FC = () => {
       user?.email?.split('@')[0] ||
       'User';
 
+  // ── Create a new room ────────────────────────
+  const handleCreateRoom = async () => {
+    if (!user?.id || isCreating) return;
+    setIsCreating(true);
+    setRoomError('');
+    try {
+      const room = await createRoom(user.id);
+      // Auto-join as participant
+      await joinRoomByCode(room.code, user.id, displayName);
+      // Send system message
+      await sendMessage(room.id, user.id, displayName, `${displayName} created the room`, 'system');
+      setActiveRoom(room);
+      setActiveView('chat');
+    } catch (err: unknown) {
+      setRoomError(err instanceof Error ? err.message : 'Failed to create room');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // ── Join an existing room by code ────────────
+  const handleJoinRoom = async () => {
+    if (!user?.id || !joinCode.trim() || isJoining) return;
+    setIsJoining(true);
+    setRoomError('');
+    try {
+      const { room } = await joinRoomByCode(joinCode.trim(), user.id, displayName);
+      await sendMessage(room.id, user.id, displayName, `${displayName} joined the room`, 'system');
+      setActiveRoom(room);
+      setActiveView('chat');
+      setShowJoinModal(false);
+      setJoinCode('');
+    } catch (err: unknown) {
+      setRoomError(err instanceof Error ? err.message : 'Failed to join room');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  // ── Leave room callback ──────────────────────
+  const handleLeaveRoom = () => {
+    setActiveRoom(null);
+    setActiveView('home');
+  };
+
   // Show login page for account upgrade
   if (showLoginUpgrade) {
     return <LoginPage onBack={() => setShowLoginUpgrade(false)} hideGuestTab />;
   }
 
+  // Show ChatRoom when active
+  if (activeView === 'chat' && activeRoom) {
+    return <ChatRoom room={activeRoom} onLeave={handleLeaveRoom} />;
+  }
+
   return (
     <div className="home-page">
+
+      {/* ── Join Room Modal ── */}
+      {showJoinModal && (
+        <div className="home-modal-overlay" onClick={() => { setShowJoinModal(false); setRoomError(''); }}>
+          <div className="home-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="home-modal-title">Join a Room</h2>
+            <p className="home-modal-subtitle">Enter the 6-character room code shared with you</p>
+
+            <input
+              className="home-modal-input"
+              type="text"
+              placeholder="e.g. A3BK7N"
+              maxLength={6}
+              value={joinCode}
+              onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setRoomError(''); }}
+              onKeyDown={(e) => e.key === 'Enter' && handleJoinRoom()}
+              autoFocus
+            />
+
+            {roomError && <p className="home-modal-error">{roomError}</p>}
+
+            <div className="home-modal-actions">
+              <button className="home-modal-cancel" onClick={() => { setShowJoinModal(false); setRoomError(''); }}>
+                Cancel
+              </button>
+              <button
+                className="home-modal-confirm"
+                onClick={handleJoinRoom}
+                disabled={joinCode.trim().length < 4 || isJoining}
+              >
+                {isJoining ? 'Joining…' : 'Join Room'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top bar */}
       <header className="home-header">
@@ -40,9 +138,18 @@ export const HomePage: React.FC = () => {
           <Logo />
         </div>
         <nav className="home-nav">
-          <a href="#" className="home-nav-link active">Home</a>
-          <a href="#" className="home-nav-link">Chat</a>
-          <a href="#" className="home-nav-link">Explore</a>
+          <button
+            className={`home-nav-link ${activeView === 'home' ? 'active' : ''}`}
+            onClick={() => setActiveView('home')}
+          >
+            Home
+          </button>
+          <button className="home-nav-link" onClick={handleCreateRoom} disabled={isCreating}>
+            {isCreating ? 'Creating…' : 'New Chat'}
+          </button>
+          <button className="home-nav-link" onClick={() => setShowJoinModal(true)}>
+            Join Room
+          </button>
         </nav>
         <div className="home-header-right">
           {/* Settings icon */}
@@ -92,22 +199,45 @@ export const HomePage: React.FC = () => {
           )}
         </div>
 
+        {roomError && !showJoinModal && (
+          <div className="home-error-banner">
+            <span>{roomError}</span>
+            <button onClick={() => setRoomError('')}>×</button>
+          </div>
+        )}
+
         <div className="home-grid">
           {/* Chat — always available */}
-          <div className="home-card">
+          <div className="home-card" onClick={handleCreateRoom}>
             <div className="home-card-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
-            <h3>Start a Chat</h3>
-            <p>Begin a new conversation with others</p>
+            <h3>{isCreating ? 'Creating…' : 'Start a Chat'}</h3>
+            <p>Create a room and share the code to chat in real time</p>
+          </div>
+
+          {/* Join Room — always available */}
+          <div className="home-card" onClick={() => setShowJoinModal(true)}>
+            <div className="home-card-icon home-card-icon-join">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+            </div>
+            <h3>Join a Room</h3>
+            <p>Enter a room code to join someone's conversation</p>
           </div>
 
           {/* Voice Call — locked for guests */}
           <div
             className={`home-card${isAnonymous ? ' home-card-locked' : ''}`}
-            onClick={() => isAnonymous && setShowLoginUpgrade(true)}
+            onClick={() => {
+              if (isAnonymous) { setShowLoginUpgrade(true); return; }
+              handleCreateRoom();
+            }}
           >
             {isAnonymous && <span className="home-card-badge">Sign up required</span>}
             <div className="home-card-icon">
@@ -116,13 +246,16 @@ export const HomePage: React.FC = () => {
               </svg>
             </div>
             <h3>Voice Call</h3>
-            <p>{isAnonymous ? 'Create an account to make voice calls' : 'Start a voice call with your contacts'}</p>
+            <p>{isAnonymous ? 'Create an account to make voice calls' : 'Create a room and start a voice call'}</p>
           </div>
 
           {/* Video Call — locked for guests */}
           <div
             className={`home-card${isAnonymous ? ' home-card-locked' : ''}`}
-            onClick={() => isAnonymous && setShowLoginUpgrade(true)}
+            onClick={() => {
+              if (isAnonymous) { setShowLoginUpgrade(true); return; }
+              handleCreateRoom();
+            }}
           >
             {isAnonymous && <span className="home-card-badge">Sign up required</span>}
             <div className="home-card-icon">
@@ -132,7 +265,7 @@ export const HomePage: React.FC = () => {
               </svg>
             </div>
             <h3>Video Call</h3>
-            <p>{isAnonymous ? 'Create an account to make video calls' : 'Start a video call with your contacts'}</p>
+            <p>{isAnonymous ? 'Create an account to make video calls' : 'Create a room and start a video call'}</p>
           </div>
         </div>
       </main>

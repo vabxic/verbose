@@ -363,3 +363,186 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Nav buttons ── */
+.home-nav-link {
+  padding: 0.5rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  transition: all 0.25s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.home-nav-link:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+/* ── Join Card icon ── */
+.home-card-icon-join {
+  background: rgba(120, 200, 255, 0.12) !important;
+  color: #78c8ff !important;
+}
+
+/* ── Modal overlay ── */
+.home-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.home-modal {
+  width: 90%;
+  max-width: 420px;
+  padding: 2rem;
+  border-radius: 20px;
+  background: rgba(18, 18, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: modalSlideUp 0.25s ease;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.home-modal-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.3rem;
+}
+
+.home-modal-subtitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 0 1.5rem;
+}
+
+.home-modal-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.25em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.home-modal-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  font-size: 1rem;
+}
+
+.home-modal-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.home-modal-error {
+  font-size: 0.82rem;
+  color: #ff6b6b;
+  margin: 0.5rem 0 0;
+  text-align: center;
+}
+
+.home-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.home-modal-cancel {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-modal-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.home-modal-confirm {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-modal-confirm:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.home-modal-confirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Error banner ── */
+.home-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 12px;
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  color: #ff6b6b;
+  font-size: 0.88rem;
+}
+
+.home-error-banner button {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.home-error-banner button:hover {
+  opacity: 1;
+}
