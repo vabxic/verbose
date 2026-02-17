@@ -157,23 +157,35 @@ export const getEmailByUsername = async (username: string): Promise<string | nul
   return data ?? null;
 };
 
-// Sign in with username and password
-export const signInWithUsername = async (username: string, password: string) => {
-  console.log('signInWithUsername called for:', username);
+// Sign in with username or email and password
+export const signInWithUsername = async (usernameOrEmail: string, password: string) => {
+  console.log('signInWithUsername called for:', usernameOrEmail);
   
-  // First, look up the email by username
-  const email = await getEmailByUsername(username);
-  console.log('Found email:', email);
+  // Check if the input is an email address
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isEmail = emailRegex.test(usernameOrEmail);
   
-  if (!email) {
-    throw new Error('Username not found');
+  if (isEmail) {
+    // If it's an email, sign in directly with email
+    console.log('Input is an email, signing in directly...');
+    const result = await signInWithEmail(usernameOrEmail, password);
+    console.log('signInWithEmail result:', result);
+    return result;
+  } else {
+    // If it's a username, look up the email first
+    const email = await getEmailByUsername(usernameOrEmail);
+    console.log('Found email:', email);
+    
+    if (!email) {
+      throw new Error('Username not found');
+    }
+    
+    // Then sign in with the email
+    console.log('Attempting signInWithEmail...');
+    const result = await signInWithEmail(email, password);
+    console.log('signInWithEmail result:', result);
+    return result;
   }
-  
-  // Then sign in with the email
-  console.log('Attempting signInWithEmail...');
-  const result = await signInWithEmail(email, password);
-  console.log('signInWithEmail result:', result);
-  return result;
 };
 
 // Send password reset email

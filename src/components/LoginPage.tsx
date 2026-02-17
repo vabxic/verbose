@@ -167,9 +167,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
 
     if (mode === 'signin') {
       if (!username) {
-        newErrors.username = 'Username is required';
+        newErrors.username = 'Username or email is required';
       } else if (username.length < 3) {
-        newErrors.username = 'Username must be at least 3 characters';
+        newErrors.username = 'Username or email must be at least 3 characters';
       }
 
       if (!password) {
@@ -471,13 +471,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
           {mode === 'signin' && (
             <form onSubmit={handleSignIn} className="login-form">
               <div className="form-group">
-                <label htmlFor="signin-username">Username</label>
+                <label htmlFor="signin-username">Username or Email</label>
                 <input
                   type="text"
                   id="signin-username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  placeholder="Enter your username or email"
                   className={errors.username ? 'error' : ''}
                   disabled={isSubmitting}
                 />
