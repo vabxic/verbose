@@ -33,6 +33,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | ''>('');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showCopied, setShowCopied] = useState(false);
   const [showLinkCopied, setShowLinkCopied] = useState(false);
   const [incomingCall, setIncomingCall] = useState<{ type: CallType } | null>(null);
@@ -43,6 +44,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const webrtcRef = useRef<WebRTCService | null>(null);
+  const callTimerRef = useRef<number | null>(null);
 
   // Store streams in refs so they persist across renders / DOM changes
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -280,13 +282,20 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
   const hangUp = async () => {
     await webrtcRef.current?.hangUp();
-    localStreamRef.current = null;
+    // stop local preview and tracks
+    stopLocalStream();
+    // stop remote refs
+    try {
+      if (remoteStreamRef.current) {
+        remoteStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    } catch {}
     remoteStreamRef.current = null;
-    setInCall(false);
-    setConnectionState('');
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+    setInCall(false);
+    setConnectionState('');
+    setElapsedSeconds(0);
   };
 
   const toggleAudio = () => {
@@ -345,12 +354,62 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     setInCall(true);
     setIncomingCall(null);
     try {
+      // ensure we have a local stream ready for the call
+      await startLocalStream();
       await webrtcRef.current?.acceptCall();
     } catch (err) {
       console.error('[ChatRoom] Failed to accept call:', err);
       setInCall(false);
     }
   };
+
+  // Acquire local media and attach to local preview + store in ref
+  const startLocalStream = async () => {
+    try {
+      if (localStreamRef.current) return;
+      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = s;
+      if (localVideoRef.current) localVideoRef.current.srcObject = s;
+    } catch (err) {
+      console.warn('[ChatRoom] Could not acquire local media:', err);
+    }
+  };
+
+  const stopLocalStream = () => {
+    try {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    } catch (err) {
+      console.warn('[ChatRoom] Error stopping local stream:', err);
+    }
+    localStreamRef.current = null;
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+  };
+
+  // Start/stop call timer when call state changes
+  useEffect(() => {
+    if (inCall) {
+      // initialize
+      setElapsedSeconds(0);
+      const start = Date.now();
+      callTimerRef.current = window.setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
+      }, 1000);
+    } else {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+    };
+  }, [inCall]);
 
   const rejectCall = async () => {
     setIncomingCall(null);
@@ -360,6 +419,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const formatTime = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDuration = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
   };
 
   return (
@@ -493,6 +560,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             </div>
           )}
 
+          <div className="chatroom-call-timer">{formatDuration(elapsedSeconds)}</div>
           <div className="chatroom-call-status">
             {connectionState === 'connecting' && 'Connecting…'}
             {connectionState === 'connected' && 'Connected'}
@@ -544,8 +612,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             )}
 
             <button className="chatroom-call-btn hangup" onClick={hangUp} title="End call">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91" />
+              <svg className="chatroom-incoming-reject-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
             </button>
           </div>
@@ -578,12 +646,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                 </svg>
                 Accept
               </button>
-              <button className="chatroom-incoming-reject" onClick={rejectCall}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <button className="chatroom-incoming-reject" onClick={rejectCall} aria-label="Reject call" title="Reject call">
+                <svg className="chatroom-incoming-reject-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
                 </svg>
-                Reject
               </button>
             </div>
           </div>

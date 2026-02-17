@@ -442,6 +442,22 @@
   z-index: 5;
 }
 
+.chatroom-call-timer {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.6rem;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 6;
+}
+
 /* Call controls */
 .chatroom-call-controls {
   position: absolute;
@@ -463,13 +479,25 @@
 .chatroom-call-overlay.audio .chatroom-call-controls {
   position: relative;
   bottom: auto;
-  left: auto;
-  transform: none;
+  left: 50%;
+  transform: translateX(-50%);
   box-shadow: none;
-  margin-left: auto;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 640px;
 }
 
 .chatroom-call-overlay.audio .chatroom-call-status {
+  position: relative;
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0 auto 8px;
+}
+
+.chatroom-call-overlay.audio .chatroom-call-timer {
   position: relative;
   top: auto;
   left: auto;
@@ -849,16 +877,33 @@
 }
 
 .chatroom-incoming-reject {
-  background: linear-gradient(135deg, rgba(255, 70, 70, 0.9), rgba(255, 50, 50, 0.8));
+  background: linear-gradient(135deg, rgba(255, 70, 70, 0.95), rgba(220, 30, 30, 0.95));
   color: #fff;
-  box-shadow: 0 4px 16px rgba(255, 70, 70, 0.3);
+  box-shadow: 0 8px 28px rgba(255, 60, 60, 0.28);
+  /* Make the reject action a circular icon button */
+  padding: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  justify-content: center;
+  gap: 0;
 }
 
 .chatroom-incoming-reject:hover {
-  background: linear-gradient(135deg, rgba(255, 50, 50, 1), rgba(255, 30, 30, 0.95));
-  box-shadow: 0 6px 24px rgba(255, 70, 70, 0.45);
-  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(255, 40, 40, 1), rgba(200, 20, 20, 1));
+  box-shadow: 0 10px 36px rgba(255, 60, 60, 0.36);
+  transform: translateY(-3px);
 }
+
+.chatroom-incoming-accept-icon,
+.chatroom-incoming-reject-icon {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+}
+
+.chatroom-incoming-accept-icon { transform: rotate(0deg); }
+.chatroom-incoming-reject-icon { transform: rotate(136deg); }
 
 /* ── Line Busy Error Modal ──────────────────── */
 .chatroom-line-busy-overlay {

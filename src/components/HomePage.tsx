@@ -301,42 +301,7 @@ export const HomePage: React.FC = () => {
             <p>Enter a room code to join someone's conversation</p>
           </div>
 
-          {/* Voice Call — locked for guests */}
-          <div
-            className={`home-card${isAnonymous ? ' home-card-locked' : ''}`}
-            onClick={() => {
-              if (isAnonymous) { setShowLoginUpgrade(true); return; }
-              handleCreateRoom();
-            }}
-          >
-            {isAnonymous && <span className="home-card-badge">Sign up required</span>}
-            <div className="home-card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-              </svg>
-            </div>
-            <h3>Voice Call</h3>
-            <p>{isAnonymous ? 'Create an account to make voice calls' : 'Create a room and start a voice call'}</p>
-          </div>
-
-          {/* Video Call — locked for guests */}
-          <div
-            className={`home-card${isAnonymous ? ' home-card-locked' : ''}`}
-            onClick={() => {
-              if (isAnonymous) { setShowLoginUpgrade(true); return; }
-              handleCreateRoom();
-            }}
-          >
-            {isAnonymous && <span className="home-card-badge">Sign up required</span>}
-            <div className="home-card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-              </svg>
-            </div>
-            <h3>Video Call</h3>
-            <p>{isAnonymous ? 'Create an account to make video calls' : 'Create a room and start a video call'}</p>
-          </div>
+          {/* (Voice & Video call cards removed) */}
         </div>
       </main>
       </div>
