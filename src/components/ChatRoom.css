@@ -4,7 +4,7 @@
 
 .chatroom {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100vh;
   width: 100%;
   background: #000000;
@@ -13,18 +13,26 @@
   overflow: hidden;
 }
 
+.chatroom-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* ── Header ─────────────────────────────────── */
 .chatroom-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 1.25rem;
-  background: rgba(0, 0, 0, 0.6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
+  padding: 0.65rem 1rem;
+  background: rgba(8, 8, 12, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
   flex-shrink: 0;
   z-index: 20;
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
 }
 
 .chatroom-header-left {
@@ -39,26 +47,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   border: none;
-  background: rgba(30, 30, 40, 0.8);
-  color: rgba(255, 255, 255, 0.65);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .chatroom-back-btn:hover {
-  background: rgba(40, 40, 50, 0.9);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
-}
-
-.chatroom-back-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
@@ -201,35 +202,174 @@
 .chatroom-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
-/* Code badge */
-.chatroom-code-badge {
+/* ── Unified header button ──────────────────── */
+.chatroom-hdr-btn {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.4rem 0.85rem;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(30, 30, 40, 0.8);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.08em;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
   position: relative;
 }
 
-.chatroom-code-badge:hover {
-  background: rgba(40, 40, 50, 0.9);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+.chatroom-hdr-btn svg {
+  width: 17px;
+  height: 17px;
 }
+
+.chatroom-hdr-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.chatroom-hdr-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.chatroom-hdr-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.chatroom-hdr-btn.disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* Code badge variant */
+.chatroom-hdr-btn.chatroom-code-badge {
+  width: auto;
+  gap: 0.4rem;
+  padding: 0 0.7rem;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.chatroom-hdr-btn.chatroom-code-badge .chatroom-code-text {
+  color: inherit;
+}
+
+.chatroom-hdr-btn.chatroom-code-badge:hover {
+  color: #fff;
+}
+
+.chatroom-hdr-btn.chatroom-code-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Call trigger buttons – slightly different styling */
+.chatroom-call-trigger {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.chatroom-call-trigger:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* Divider between utility & call buttons */
+.chatroom-hdr-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 0.2rem;
+  flex-shrink: 0;
+}
+
+/* ── Desktop actions group ──────────────────── */
+.chatroom-actions-desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/* ── Mobile more-menu ───────────────────────── */
+.chatroom-more-wrapper {
+  display: none; /* hidden on desktop */
+  position: relative;
+}
+
+.chatroom-more-trigger {
+  /* inherits from .chatroom-hdr-btn */
+}
+
+.chatroom-more-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 170px;
+  padding: 0.35rem;
+  border-radius: 14px;
+  background: rgba(16, 16, 24, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px);
+  z-index: 60;
+  animation: morePopIn 0.18s ease-out;
+}
+
+@keyframes morePopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chatroom-more-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  text-align: left;
+}
+
+.chatroom-more-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.chatroom-more-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.chatroom-more-item:hover svg {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Code badge (legacy class removed – now uses .chatroom-hdr-btn.chatroom-code-badge) */
 
 .chatroom-copied-toast {
   position: absolute;
@@ -254,38 +394,7 @@
   100% { opacity: 0; }
 }
 
-/* Action buttons (call) */
-.chatroom-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(30, 30, 40, 0.8);
-  color: rgba(255, 255, 255, 0.65);
-  cursor: pointer;
-  transition: all 0.25s ease;
-  flex-shrink: 0;
-}
-
-.chatroom-action-btn:hover:not(.disabled) {
-  background: rgba(40, 40, 50, 0.9);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
-}
-
-.chatroom-action-btn.disabled {
-  opacity: 0.32;
-  cursor: not-allowed;
-}
-
-.chatroom-action-btn svg {
-  width: 18px;
-  height: 18px;
-}
+/* Action buttons (legacy – now uses .chatroom-hdr-btn) */
 
 /* ── Call overlay ───────────────────────────── */
 .chatroom-call-overlay {
@@ -761,29 +870,7 @@
   margin-left: 0.4rem;
 }
 
-/* ── Share link button ───────────────────────── */
-.chatroom-share-link-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(30, 30, 40, 0.8);
-  color: rgba(255, 255, 255, 0.65);
-  cursor: pointer;
-  transition: all 0.25s ease;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.chatroom-share-link-btn:hover {
-  background: rgba(40, 40, 50, 0.9);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
-}
+/* Share link (legacy – now uses .chatroom-hdr-btn) */
 
 /* ── Incoming call overlay ──────────────────── */
 .chatroom-incoming-call-overlay {
@@ -1001,63 +1088,58 @@
 .chatroom-input-bar {
   display: flex;
   align-items: flex-end;
-  gap: 0.6rem;
-  padding: 0.9rem 1.25rem 1.1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(8, 8, 12, 0.85);
+  backdrop-filter: blur(16px);
   flex-shrink: 0;
-  box-shadow: 0 -4px 20px rgba(255, 255, 255, 0.1);
 }
 
 .chatroom-input {
   flex: 1;
-  padding: 0.75rem 1.1rem;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(30, 30, 40, 0.8);
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
   color: #ffffff;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-family: inherit;
   resize: none;
   outline: none;
-  transition: all 0.25s ease;
-  min-height: 40px;
+  transition: all 0.2s ease;
+  min-height: 38px;
   max-height: 120px;
 }
 
 .chatroom-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.25);
   font-weight: 400;
 }
 
 .chatroom-input:focus {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(40, 40, 50, 0.9);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .chatroom-send-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   border: none;
-  background: rgba(30, 30, 40, 0.8);
-  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .chatroom-send-btn:hover:not(:disabled) {
-  background: rgba(40, 40, 50, 0.9);
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
 }
 
 .chatroom-send-btn:active:not(:disabled) {
@@ -1076,38 +1158,28 @@
 
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 768px) {
+  /* Show more-menu trigger, hide desktop actions */
+  .chatroom-actions-desktop {
+    display: none;
+  }
+  .chatroom-more-wrapper {
+    display: block;
+  }
+
   .chatroom-header {
-    padding: 0.7rem 0.75rem;
-    gap: 0.5rem;
+    padding: 0.55rem 0.65rem;
   }
 
   .chatroom-header-left {
-    gap: 0.6rem;
-  }
-
-  .chatroom-header-actions {
-    gap: 0.35rem;
+    gap: 0.5rem;
   }
 
   .chatroom-room-name {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
   }
 
   .chatroom-participant-count {
-    font-size: 0.7rem;
-  }
-
-  .chatroom-code-badge {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.75rem;
-  }
-
-  .chatroom-code-badge span {
-    display: none;
-  }
-
-  .chatroom-call-overlay.video {
-    /* fullscreen via fixed positioning */
+    font-size: 0.68rem;
   }
 
   .chatroom-local-video {
@@ -1146,6 +1218,16 @@
     height: 18px;
   }
 
+  .chatroom-hdr-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chatroom-hdr-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+
   .chatroom-call-btn {
     width: 44px;
     height: 44px;
@@ -1155,16 +1237,6 @@
     width: 20px;
     height: 20px;
   }
-
-  .chatroom-action-btn {
-    width: 32px;
-    height: 32px;
-  }
-
-  .chatroom-action-btn svg {
-    width: 16px;
-    height: 16px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1173,43 +1245,35 @@
   }
 
   .chatroom-header {
-    padding: 0.6rem 0.65rem;
+    padding: 0.5rem 0.55rem;
   }
 
   .chatroom-header-left {
-    gap: 0.5rem;
-  }
-
-  .chatroom-header-actions {
-    gap: 0.3rem;
+    gap: 0.4rem;
   }
 
   .chatroom-back-btn {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
 
   .chatroom-back-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 
   .chatroom-room-name {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
   }
 
-  .chatroom-action-btn {
-    width: 32px;
-    height: 32px;
+  .chatroom-hdr-btn {
+    width: 30px;
+    height: 30px;
   }
 
-  .chatroom-action-btn svg {
+  .chatroom-hdr-btn svg {
     width: 14px;
     height: 14px;
-  }
-
-  .chatroom-call-overlay.video {
-    /* fullscreen via fixed positioning */
   }
 
   .chatroom-local-video {
@@ -1255,67 +1319,7 @@
   }
 }
 
-/* ── Save Room Button ────────────────────── */
-.chatroom-save-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.65rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-  transition: all 0.25s ease;
-  font-size: 0.78rem;
-  font-weight: 500;
-}
-
-.chatroom-save-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.9);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-
-.chatroom-save-btn.saved {
-  background: rgba(255, 200, 60, 0.12);
-  color: rgba(255, 200, 60, 0.9);
-  border-color: rgba(255, 200, 60, 0.3);
-}
-
-.chatroom-save-btn.saved:hover {
-  background: rgba(255, 200, 60, 0.2);
-}
-
-.chatroom-save-btn:disabled {
-  opacity: 0.4;
-  cursor: wait;
-}
-
-.chatroom-save-label {
-  font-size: 0.75rem;
-}
-
-/* ── Add Friend Button ───────────────────── */
-.chatroom-add-friend-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.chatroom-add-friend-btn:hover {
-  background: rgba(100, 180, 255, 0.15);
-  color: rgba(100, 180, 255, 0.95);
-  border-color: rgba(100, 180, 255, 0.3);
-}
+/* Save/Add-friend buttons (legacy – now uses .chatroom-hdr-btn) */
 
 /* ── Friend Request Modal ────────────────── */
 .chatroom-friend-modal-overlay {

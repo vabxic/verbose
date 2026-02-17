@@ -6,6 +6,7 @@ import App from "./App.tsx";
 import { AppProvider } from "./providers/app.tsx";
 import { AuthProvider } from "./providers/auth.tsx";
 const AuthCallback = lazy(() => import("./components/AuthCallback.tsx"));
+const GoogleDriveCallback = lazy(() => import("./components/GoogleDriveCallback.tsx"));
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -18,6 +19,14 @@ createRoot(document.getElementById("root")!).render(
               element={
                 <Suspense fallback={null}>
                   <AuthCallback />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/auth/google-drive/callback"
+              element={
+                <Suspense fallback={null}>
+                  <GoogleDriveCallback />
                 </Suspense>
               }
             />

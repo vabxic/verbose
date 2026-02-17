@@ -13,6 +13,9 @@ import type { Room, RoomMessage, RoomParticipant } from '../lib/rooms';
 import { WebRTCService } from '../lib/webrtc';
 import type { CallType } from '../lib/webrtc';
 import { saveRoom, unsaveRoom, isRoomSaved, sendFriendRequest } from '../lib/social';
+import { uploadRoomFile, formatFileSize } from '../lib/drive';
+import type { UploadProgress } from '../lib/drive';
+import RoomDrive from './RoomDrive';
 import './ChatRoom.css';
 
 interface ChatRoomProps {
@@ -49,6 +52,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [selectedParticipant, setSelectedParticipant] = useState<RoomParticipant | null>(null);
   const [sendingFriendReq, setSendingFriendReq] = useState(false);
   const [friendReqStatus, setFriendReqStatus] = useState<string>('');
+
+  // Drive state
+  const [showDrive, setShowDrive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [inlineUploadProgress, setInlineUploadProgress] = useState<UploadProgress | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Mobile more-menu state
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -88,6 +101,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       }
     })();
   }, [room.id, user?.id]);
+
+  // ── Close mobile more-menu on outside click ───
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showMoreMenu]);
 
   // ── Subscribe to realtime ─────────────────────
   useEffect(() => {
@@ -464,6 +489,34 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     setIncomingCall(null);
     await webrtcRef.current?.rejectCall();
   };
+
+  // ── Inline file upload (beside send button) ───
+  const handleInlineUpload = useCallback(async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0 || !user?.id) return;
+    const file = fileList[0];
+    const MAX_SIZE = 3 * 1024 * 1024 * 1024; // 3 GB
+    if (file.size > MAX_SIZE) {
+      alert('File exceeds the 3 GB limit.');
+      return;
+    }
+    setIsUploading(true);
+    setInlineUploadProgress({ percent: 0, bytesUploaded: 0, totalBytes: file.size });
+    try {
+      const uploaded = await uploadRoomFile(room.id, user.id, displayName, file, (p) =>
+        setInlineUploadProgress(p),
+      );
+      // Send a file message in chat so other users see it inline
+      await sendMessage(room.id, user.id, displayName, `📎 ${uploaded.file_name} (${formatFileSize(uploaded.file_size)})`, 'file');
+    } catch (err) {
+      console.error('[ChatRoom] Upload error:', err);
+      alert('Upload failed: ' + (err as Error).message);
+    } finally {
+      setIsUploading(false);
+      setInlineUploadProgress(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [room.id, user?.id, displayName]);
+
   // ── Format timestamp ──────────────────────────
   const formatTime = (iso: string) => {
     const d = new Date(iso);
@@ -480,6 +533,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
   return (
     <div className="chatroom">
+      <div className="chatroom-main">
       {/* ── Header ─────────────────────── */}
       <header className="chatroom-header">
         <div className="chatroom-header-left">
@@ -516,57 +570,121 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         </div>
 
         <div className="chatroom-header-actions">
-          {/* Save room button */}
-          <button
-            className={`chatroom-save-btn${roomSaved ? ' saved' : ''}`}
-            onClick={handleToggleSaveRoom}
-            disabled={savingRoom}
-            title={roomSaved ? 'Unsave room' : 'Save room'}
-          >
-            <svg viewBox="0 0 24 24" fill={roomSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="16" height="16">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-            {roomSaved && <span className="chatroom-save-label">Saved</span>}
-          </button>
+          {/* ── Desktop utility actions (hidden on mobile) ── */}
+          <div className="chatroom-actions-desktop">
+            <button
+              className={`chatroom-hdr-btn${roomSaved ? ' active' : ''}`}
+              onClick={handleToggleSaveRoom}
+              disabled={savingRoom}
+              title={roomSaved ? 'Unsave room' : 'Save room'}
+            >
+              <svg viewBox="0 0 24 24" fill={roomSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
 
-          {/* Add friend button */}
-          <button
-            className="chatroom-add-friend-btn"
-            onClick={() => setShowFriendReqModal(true)}
-            title="Send friend request"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="8.5" cy="7" r="4" />
-              <line x1="20" y1="8" x2="20" y2="14" />
-              <line x1="23" y1="11" x2="17" y2="11" />
-            </svg>
-          </button>
+            <button className="chatroom-hdr-btn" onClick={() => setShowFriendReqModal(true)} title="Add friend">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+            </button>
 
-          {/* Room code badge */}
-          <button className="chatroom-code-badge" onClick={copyCode} title="Copy room code">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
-            <span>{room.code}</span>
-            {showCopied && <span className="chatroom-copied-toast">Copied!</span>}
-          </button>
+            <button className="chatroom-hdr-btn chatroom-code-badge" onClick={copyCode} title="Copy room code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              <span className="chatroom-code-text">{room.code}</span>
+              {showCopied && <span className="chatroom-copied-toast">Copied!</span>}
+            </button>
 
-          {/* Share invite link */}
-          <button className="chatroom-share-link-btn" onClick={shareLink} title="Copy invite link">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
-            {showLinkCopied && <span className="chatroom-copied-toast">Link copied!</span>}
-          </button>
+            <button className="chatroom-hdr-btn" onClick={shareLink} title="Copy invite link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              {showLinkCopied && <span className="chatroom-copied-toast">Link copied!</span>}
+            </button>
 
-          {/* Call buttons (disabled for guests) */}
+            <button
+              className={`chatroom-hdr-btn${showDrive ? ' active' : ''}`}
+              onClick={() => setShowDrive((v) => !v)}
+              title={showDrive ? 'Close drive' : 'Room Drive'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* ── Mobile more-menu (hidden on desktop) ── */}
+          <div className="chatroom-more-wrapper" ref={moreMenuRef}>
+            <button
+              className={`chatroom-hdr-btn chatroom-more-trigger${showMoreMenu ? ' active' : ''}`}
+              onClick={() => setShowMoreMenu((v) => !v)}
+              title="More options"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </button>
+
+            {showMoreMenu && (
+              <div className="chatroom-more-popover">
+                <button className="chatroom-more-item" onClick={() => { handleToggleSaveRoom(); setShowMoreMenu(false); }}>
+                  <svg viewBox="0 0 24 24" fill={roomSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>{roomSaved ? 'Unsave' : 'Save room'}</span>
+                </button>
+                <button className="chatroom-more-item" onClick={() => { setShowFriendReqModal(true); setShowMoreMenu(false); }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <line x1="20" y1="8" x2="20" y2="14" />
+                    <line x1="23" y1="11" x2="17" y2="11" />
+                  </svg>
+                  <span>Add friend</span>
+                </button>
+                <button className="chatroom-more-item" onClick={() => { copyCode(); setShowMoreMenu(false); }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  <span>{room.code}</span>
+                  {showCopied && <span className="chatroom-copied-toast">Copied!</span>}
+                </button>
+                <button className="chatroom-more-item" onClick={() => { shareLink(); setShowMoreMenu(false); }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                  <span>Share link</span>
+                  {showLinkCopied && <span className="chatroom-copied-toast">Link copied!</span>}
+                </button>
+                <button className="chatroom-more-item" onClick={() => { setShowDrive((v) => !v); setShowMoreMenu(false); }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>{showDrive ? 'Close drive' : 'Drive'}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Divider ── */}
+          <div className="chatroom-hdr-divider" />
+
+          {/* ── Call buttons (always visible) ── */}
           {!inCall && (
             <>
               <button
-                className={`chatroom-action-btn${isAnonymous ? ' disabled' : ''}`}
+                className={`chatroom-hdr-btn chatroom-call-trigger${isAnonymous ? ' disabled' : ''}`}
                 onClick={() => startCall('audio')}
                 disabled={isAnonymous}
                 title={isAnonymous ? 'Sign up for voice calls' : 'Voice call'}
@@ -576,7 +694,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                 </svg>
               </button>
               <button
-                className={`chatroom-action-btn${isAnonymous ? ' disabled' : ''}`}
+                className={`chatroom-hdr-btn chatroom-call-trigger${isAnonymous ? ' disabled' : ''}`}
                 onClick={() => startCall('video')}
                 disabled={isAnonymous}
                 title={isAnonymous ? 'Sign up for video calls' : 'Video call'}
@@ -853,6 +971,41 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
           placeholder="Type a message…"
           rows={1}
         />
+
+        {/* Upload button (beside send) */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          style={{ display: 'none' }}
+          onChange={(e) => handleInlineUpload(e.target.files)}
+        />
+        <button
+          className={`chatroom-upload-btn${isUploading ? ' uploading' : ''}`}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          title="Upload file"
+        >
+          {isUploading && inlineUploadProgress ? (
+            <div className="upload-progress-ring">
+              <svg viewBox="0 0 36 36">
+                <circle className="track" cx="18" cy="18" r="15.5" />
+                <circle
+                  className="fill"
+                  cx="18"
+                  cy="18"
+                  r="15.5"
+                  strokeDasharray={`${2 * Math.PI * 15.5}`}
+                  strokeDashoffset={`${2 * Math.PI * 15.5 * (1 - inlineUploadProgress.percent / 100)}`}
+                />
+              </svg>
+            </div>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          )}
+        </button>
+
         <button
           className="chatroom-send-btn"
           onClick={handleSendMessage}
@@ -865,6 +1018,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
           </svg>
         </button>
       </div>
+      </div>{/* end chatroom-main */}
+
+      {/* ── Drive side-panel ──────────── */}
+      {showDrive && (
+        <RoomDrive roomId={room.id} onClose={() => setShowDrive(false)} />
+      )}
     </div>
   );
 };

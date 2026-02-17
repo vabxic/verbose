@@ -151,7 +151,7 @@ export async function sendMessage(
   senderId: string,
   senderName: string,
   content: string,
-  type: 'text' | 'system' = 'text',
+  type: 'text' | 'system' | 'file' = 'text',
 ): Promise<RoomMessage> {
   console.log('[rooms] Sending message:', { roomId, senderId, senderName, content, type });
   const { data, error } = await supabase
