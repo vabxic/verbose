@@ -6,9 +6,15 @@ import {
   markMessagesAsRead,
   clearChat,
   subscribeToDMs,
+  getDMChannelId,
+  sendDMSignal,
+  subscribeToDMSignals,
+  cleanOldDMSignals,
 } from '../lib/friends-chat';
-import type { DirectMessage, FileMetadata } from '../lib/friends-chat';
+import type { DirectMessage, FileMetadata, DMSignal } from '../lib/friends-chat';
 import { formatFileSize } from '../lib/drive';
+import { WebRTCService } from '../lib/webrtc';
+import type { CallType, SignalAdapter } from '../lib/webrtc';
 import './FriendChat.css';
 
 interface FriendChatProps {
@@ -44,6 +50,24 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Call state
+  const [inCall, setInCall] = useState(false);
+  const [callType, setCallType] = useState<CallType>('audio');
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | ''>('');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [incomingCall, setIncomingCall] = useState<{ type: CallType } | null>(null);
+  const [lineBusyError, setLineBusyError] = useState(false);
+
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const webrtcRef = useRef<WebRTCService | null>(null);
+  const callTimerRef = useRef<number | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+
   // Load messages
   useEffect(() => {
     if (!user?.id) return;
@@ -76,6 +100,196 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // ── WebRTC for DM calls ─────────────────────
+  useEffect(() => {
+    if (!user?.id) return;
+    const channelId = getDMChannelId(user.id, friendId);
+
+    const dmSignalAdapter: SignalAdapter = {
+      sendSignal: (chId, senderId, type, payload, targetId) =>
+        sendDMSignal(chId, senderId, type as DMSignal['type'], payload, targetId),
+      subscribeToSignals: (chId, currentUserId, onSignal) =>
+        subscribeToDMSignals(chId, currentUserId, onSignal as (s: DMSignal) => void),
+    };
+
+    const rtc = new WebRTCService(channelId, user.id, {
+      onRemoteStream: (stream) => {
+        remoteStreamRef.current = stream;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+          remoteVideoRef.current.play().catch(() => {});
+        }
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = stream;
+          remoteAudioRef.current.play().catch(() => {});
+        }
+        setInCall(true);
+      },
+      onLocalStream: (stream) => {
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(() => {});
+        }
+      },
+      onIncomingCall: (type) => {
+        setIncomingCall({ type });
+      },
+      onCallEnded: () => {
+        localStreamRef.current = null;
+        remoteStreamRef.current = null;
+        setInCall(false);
+        setIncomingCall(null);
+        setConnectionState('');
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+        if (localVideoRef.current) localVideoRef.current.srcObject = null;
+        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+      },
+      onConnectionStateChange: (state) => {
+        setConnectionState(state);
+      },
+    }, dmSignalAdapter);
+
+    rtc.startSignaling();
+    webrtcRef.current = rtc;
+
+    return () => {
+      rtc.cleanup();
+      webrtcRef.current = null;
+    };
+  }, [user?.id, friendId]);
+
+  // Attach streams when call type / in-call changes
+  useEffect(() => {
+    if (inCall) {
+      const timer = setTimeout(() => {
+        if (callType === 'video') {
+          if (localVideoRef.current && localStreamRef.current) {
+            localVideoRef.current.srcObject = localStreamRef.current;
+            localVideoRef.current.play().catch(() => {});
+          }
+          if (remoteVideoRef.current && remoteStreamRef.current) {
+            remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            remoteVideoRef.current.play().catch(() => {});
+          }
+        } else {
+          if (remoteAudioRef.current && remoteStreamRef.current) {
+            remoteAudioRef.current.srcObject = remoteStreamRef.current;
+            remoteAudioRef.current.play().catch(() => {});
+          }
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [inCall, callType]);
+
+  // Call timer
+  useEffect(() => {
+    if (inCall) {
+      setElapsedSeconds(0);
+      const start = Date.now();
+      callTimerRef.current = window.setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
+      }, 1000);
+    } else {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+    };
+  }, [inCall]);
+
+  // ── Call controls ─────────────────────────────
+  const startCall = async (type: CallType) => {
+    if (incomingCall) {
+      setLineBusyError(true);
+      setTimeout(() => setLineBusyError(false), 3000);
+      return;
+    }
+    if (!user?.id) return;
+    const channelId = getDMChannelId(user.id, friendId);
+    setCallType(type);
+    setInCall(true);
+    try {
+      await cleanOldDMSignals(channelId);
+      await webrtcRef.current?.startCall(type);
+    } catch (err) {
+      console.error('[FriendChat] Failed to start call:', err);
+      setInCall(false);
+      alert('Failed to start call: ' + (err as Error).message);
+    }
+  };
+
+  const hangUp = async () => {
+    await webrtcRef.current?.hangUp();
+    stopLocalStream();
+    try {
+      if (remoteStreamRef.current) {
+        remoteStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    } catch {}
+    remoteStreamRef.current = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+    setInCall(false);
+    setConnectionState('');
+    setElapsedSeconds(0);
+  };
+
+  const stopLocalStream = () => {
+    try {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    } catch {}
+    localStreamRef.current = null;
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+  };
+
+  const toggleAudio = () => {
+    const next = !audioEnabled;
+    setAudioEnabled(next);
+    webrtcRef.current?.toggleAudio(next);
+  };
+
+  const toggleVideo = () => {
+    const next = !videoEnabled;
+    setVideoEnabled(next);
+    webrtcRef.current?.toggleVideo(next);
+  };
+
+  const acceptCall = async () => {
+    if (!incomingCall) return;
+    setCallType(incomingCall.type);
+    setInCall(true);
+    setIncomingCall(null);
+    try {
+      await webrtcRef.current?.acceptCall();
+    } catch (err) {
+      console.error('[FriendChat] Failed to accept call:', err);
+      setInCall(false);
+    }
+  };
+
+  const rejectCall = async () => {
+    setIncomingCall(null);
+    await webrtcRef.current?.rejectCall();
+  };
+
+  const formatDuration = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  };
 
   // Send text message
   const handleSend = useCallback(async () => {
@@ -277,7 +491,7 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
     <div className="friend-chat">
       {/* Header */}
       <header className="fc-header">
-        <button className="fc-back-btn" onClick={onBack}>
+        <button className="fc-back-btn" onClick={() => { if (inCall) hangUp(); onBack(); }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
@@ -292,12 +506,29 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
             <span className="fc-header-status">{isOnline ? 'Online' : 'Offline'}</span>
           </div>
         </div>
-        <button className="fc-clear-btn" onClick={() => setShowClearConfirm(true)} title="Clear chat">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-        </button>
+        <div className="fc-header-actions">
+          {!inCall && (
+            <>
+              <button className="fc-call-btn" onClick={() => startCall('audio')} title="Voice call">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+              </button>
+              <button className="fc-call-btn" onClick={() => startCall('video')} title="Video call">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              </button>
+            </>
+          )}
+          <button className="fc-clear-btn" onClick={() => setShowClearConfirm(true)} title="Clear chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* Clear chat confirmation */}
@@ -324,6 +555,140 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* ── Call overlay ─────────── */}
+      {inCall && (
+        <div className={`fc-call-overlay ${callType}`}>
+          {callType === 'video' ? (
+            <div className="fc-call-videos">
+              <video ref={remoteVideoRef} className="fc-remote-video" autoPlay playsInline />
+              <video ref={localVideoRef} className="fc-local-video" autoPlay playsInline muted />
+            </div>
+          ) : (
+            <div className="fc-audio-visual">
+              <div className="fc-audio-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              </div>
+              <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+            </div>
+          )}
+
+          <div className="fc-call-timer">{formatDuration(elapsedSeconds)}</div>
+          <div className="fc-call-status">
+            {connectionState === 'connecting' && 'Connecting…'}
+            {connectionState === 'connected' && 'Connected'}
+            {connectionState === 'disconnected' && 'Reconnecting…'}
+          </div>
+
+          <div className="fc-call-controls">
+            <button
+              className={`fc-call-ctrl-btn ${!audioEnabled ? 'off' : ''}`}
+              onClick={toggleAudio}
+              title={audioEnabled ? 'Mute' : 'Unmute'}
+            >
+              {audioEnabled ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                  <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .38-.03.75-.08 1.12" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              )}
+            </button>
+
+            {callType === 'video' && (
+              <button
+                className={`fc-call-ctrl-btn ${!videoEnabled ? 'off' : ''}`}
+                onClick={toggleVideo}
+                title={videoEnabled ? 'Camera off' : 'Camera on'}
+              >
+                {videoEnabled ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                )}
+              </button>
+            )}
+
+            <button className="fc-call-ctrl-btn hangup" onClick={hangUp} title="End call">
+              <svg className="fc-incoming-reject-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Incoming call overlay ────── */}
+      {incomingCall && !inCall && (
+        <div className="fc-incoming-call-overlay">
+          <div className="fc-incoming-call-card">
+            <div className="fc-incoming-call-icon">
+              {incomingCall.type === 'video' ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+              )}
+            </div>
+            <h3 className="fc-incoming-call-title">
+              {friendName} — {incomingCall.type} call
+            </h3>
+            <div className="fc-incoming-call-actions">
+              <button className="fc-incoming-accept" onClick={acceptCall}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                Accept
+              </button>
+              <button className="fc-incoming-reject" onClick={rejectCall}>
+                <svg className="fc-incoming-reject-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Line Busy Error ──────── */}
+      {lineBusyError && (
+        <div className="fc-line-busy-overlay">
+          <div className="fc-line-busy-card">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <h3>Line Busy</h3>
+            <p>{friendName} is calling you. Accept or reject their call first.</p>
+          </div>
         </div>
       )}
 

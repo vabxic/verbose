@@ -17,15 +17,23 @@
 
 /* ── Header ── */
 .home-header {
-  position: relative;
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  max-width: 1200px;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 2rem;
-  backdrop-filter: blur(12px);
-  background: rgba(10, 10, 20, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .home-header-left {
@@ -49,15 +57,15 @@
   height: 36px;
   border-radius: 10px;
   border: none;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.5);
   cursor: pointer;
   transition: all 0.25s ease;
 }
 
 .home-header-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.9);
 }
 
 .home-header-icon-btn svg {
@@ -65,34 +73,45 @@
   height: 18px;
 }
 
+/* Make the settings icon white specifically */
+.home-header-icon-btn[aria-label="Settings"] {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.home-header-icon-btn[aria-label="Settings"]:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
 /* ── Navigation ── */
 .home-nav {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 0.5rem;
 }
 
 .home-nav-link {
-  padding: 0.5rem 1.25rem;
-  border-radius: 10px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(0, 0, 0, 0.6);
   text-decoration: none;
   transition: all 0.25s ease;
+  position: relative;
+  background: transparent;
+  border: none;
 }
 
 .home-nav-link:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.06);
+  color: #000;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .home-nav-link.active {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: #000;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* ── Main ── */
@@ -101,7 +120,7 @@
   z-index: 5;
   max-width: 960px;
   margin: 0 auto;
-  padding: 3rem 2rem;
+  padding: 6rem 2rem 3rem;
 }
 
 /* ── Welcome card ── */
@@ -241,20 +260,33 @@
 }
 
 .home-card-icon {
-  width: 44px;
-  height: 44px;
-  margin-bottom: 1rem;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #c5c5ff;
+  transition: all 0.3s ease;
+}
+
+.home-card:hover .home-card-icon {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-4px) scale(1.05);
 }
 
 .home-card-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
+  transition: color 0.3s ease;
+}
+
+.home-card:hover .home-card-icon svg {
+  color: #fff;
 }
 
 .home-card h3 {

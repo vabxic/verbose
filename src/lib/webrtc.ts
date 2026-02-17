@@ -1,5 +1,27 @@
-import { sendSignal, subscribeToSignals } from './rooms';
+import { sendSignal as roomSendSignal, subscribeToSignals as roomSubscribeToSignals } from './rooms';
 import type { RoomSignal } from './rooms';
+
+// Generic signal type used by both Room and DM WebRTC
+export interface GenericSignal {
+  id: string;
+  sender_id: string;
+  target_id: string | null;
+  type: 'offer' | 'answer' | 'ice-candidate' | 'hang-up';
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SignalAdapter {
+  sendSignal: (channelId: string, senderId: string, type: GenericSignal['type'], payload: Record<string, unknown>, targetId?: string) => Promise<void>;
+  subscribeToSignals: (channelId: string, currentUserId: string, onSignal: (signal: GenericSignal) => void) => () => void;
+}
+
+/** Default signal adapter using room_signals table */
+const roomSignalAdapter: SignalAdapter = {
+  sendSignal: roomSendSignal,
+  subscribeToSignals: (channelId, currentUserId, onSignal) =>
+    roomSubscribeToSignals(channelId, currentUserId, onSignal as (signal: RoomSignal) => void),
+};
 
 // ── STUN / TURN configuration ───────────────────
 // Uses Google's free public STUN servers.
@@ -53,20 +75,22 @@ export class WebRTCService {
   // ICE candidate buffering – candidates that arrive before remoteDescription is set
   private pendingCandidates: RTCIceCandidateInit[] = [];
   private hasRemoteDescription = false;
-  private pendingOfferSignal: RoomSignal | null = null;
+  private pendingOfferSignal: GenericSignal | null = null;
 
   // Signal processing queue to prevent race conditions
-  private signalQueue: RoomSignal[] = [];
+  private signalQueue: GenericSignal[] = [];
   private processingSignal = false;
 
   private roomId: string;
   private userId: string;
   private callbacks: WebRTCCallbacks;
+  private signalAdapter: SignalAdapter;
 
-  constructor(roomId: string, userId: string, callbacks: WebRTCCallbacks) {
+  constructor(roomId: string, userId: string, callbacks: WebRTCCallbacks, signalAdapter?: SignalAdapter) {
     this.roomId = roomId;
     this.userId = userId;
     this.callbacks = callbacks;
+    this.signalAdapter = signalAdapter ?? roomSignalAdapter;
   }
 
   // ── Get local media stream ──────────────────
@@ -101,7 +125,7 @@ export class WebRTCService {
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         console.log('[WebRTC] Sending ICE candidate');
-        sendSignal(this.roomId, this.userId, 'ice-candidate', {
+        this.signalAdapter.sendSignal(this.roomId, this.userId, 'ice-candidate', {
           candidate: event.candidate.toJSON(),
         });
       }
@@ -134,7 +158,7 @@ export class WebRTCService {
 
   // ── Start listening for signaling messages ──
   startSignaling(): void {
-    this.unsubSignals = subscribeToSignals(
+    this.unsubSignals = this.signalAdapter.subscribeToSignals(
       this.roomId,
       this.userId,
       (signal) => this.enqueueSignal(signal),
@@ -142,7 +166,7 @@ export class WebRTCService {
   }
 
   // ── Signal queue – ensures signals are processed one at a time ──
-  private enqueueSignal(signal: RoomSignal): void {
+  private enqueueSignal(signal: GenericSignal): void {
     this.signalQueue.push(signal);
     this.processSignalQueue();
   }
@@ -164,7 +188,7 @@ export class WebRTCService {
   }
 
   // ── Handle incoming signals ─────────────────
-  private async handleSignal(signal: RoomSignal): Promise<void> {
+  private async handleSignal(signal: GenericSignal): Promise<void> {
     console.log('[WebRTC] Handling signal:', signal.type);
     switch (signal.type) {
       case 'offer':
@@ -198,7 +222,7 @@ export class WebRTCService {
     const offer = await pc.createOffer({ iceRestart: true });
     await pc.setLocalDescription(offer);
 
-    await sendSignal(this.roomId, this.userId, 'offer', {
+    await this.signalAdapter.sendSignal(this.roomId, this.userId, 'offer', {
       sdp: offer.sdp,
       type: offer.type,
       callType,
@@ -207,7 +231,7 @@ export class WebRTCService {
 
   // ── Handle incoming offer (callee side) ─────
   // Stores the offer and notifies UI; callee must call acceptCall() or rejectCall()
-  private async handleOffer(signal: RoomSignal): Promise<void> {
+  private async handleOffer(signal: GenericSignal): Promise<void> {
     const payload = signal.payload as { sdp: string; type: RTCSdpType; callType: CallType };
     this.pendingOfferSignal = signal;
     this.callbacks.onIncomingCall?.(payload.callType);
@@ -244,7 +268,7 @@ export class WebRTCService {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    await sendSignal(
+    await this.signalAdapter.sendSignal(
       this.roomId,
       this.userId,
       'answer',
@@ -258,11 +282,11 @@ export class WebRTCService {
     if (!this.pendingOfferSignal) return;
     const signal = this.pendingOfferSignal;
     this.pendingOfferSignal = null;
-    await sendSignal(this.roomId, this.userId, 'hang-up', {}, signal.sender_id);
+    await this.signalAdapter.sendSignal(this.roomId, this.userId, 'hang-up', {}, signal.sender_id);
   }
 
   // ── Handle incoming answer ──────────────────
-  private async handleAnswer(signal: RoomSignal): Promise<void> {
+  private async handleAnswer(signal: GenericSignal): Promise<void> {
     const payload = signal.payload as { sdp: string; type: RTCSdpType };
     if (!this.pc) return;
     await this.pc.setRemoteDescription(
@@ -275,7 +299,7 @@ export class WebRTCService {
   }
 
   // ── Handle ICE candidate ────────────────────
-  private async handleIceCandidate(signal: RoomSignal): Promise<void> {
+  private async handleIceCandidate(signal: GenericSignal): Promise<void> {
     const payload = signal.payload as { candidate: RTCIceCandidateInit };
 
     // Buffer if peer connection or remote description not ready yet
@@ -322,7 +346,7 @@ export class WebRTCService {
 
   // ── Hang up ─────────────────────────────────
   async hangUp(): Promise<void> {
-    await sendSignal(this.roomId, this.userId, 'hang-up', {});
+    await this.signalAdapter.sendSignal(this.roomId, this.userId, 'hang-up', {});
     this.endCall();
   }
 

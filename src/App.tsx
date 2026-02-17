@@ -233,6 +233,35 @@ function FadeSection({ children, className = "" }: { children: React.ReactNode; 
   );
 }
 
+/* Slide-in from right section wrapper */
+function SlideInRightSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const spring = useSpring({
+    opacity: visible ? 1 : 0,
+    transform: visible ? "translateX(0px)" : "translateX(100px)",
+    config: { tension: 80, friction: 26 },
+  });
+
+  return (
+    <animated.div ref={ref} style={spring} className={className}>
+      {children}
+    </animated.div>
+  );
+}
+
 function App() {
   const { user, session, loading, isAnonymous } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
@@ -477,6 +506,7 @@ function App() {
         {/* Contact section removed per request */}
 
         {/* ── Footer ── */}
+        <SlideInRightSection>
         <footer className="landing-footer">
           <div className="landing-footer-top">
             <div className="footer-cta">
@@ -547,6 +577,7 @@ function App() {
 
           <div className="footer-big-name">Vaibhav Singh</div>
         </footer>
+        </SlideInRightSection>
       </div>
     </div>
   );

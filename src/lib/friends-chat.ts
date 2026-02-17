@@ -246,3 +246,83 @@ export function getFriendName(
     ? friendRequest.receiver_name || 'User'
     : friendRequest.sender_name || 'User';
 }
+
+// ── DM Signaling (WebRTC for Direct Messages) ───
+
+export interface DMSignal {
+  id: string;
+  channel_id: string;
+  sender_id: string;
+  target_id: string | null;
+  type: 'offer' | 'answer' | 'ice-candidate' | 'hang-up';
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+/** Create a deterministic channel ID for a DM pair */
+export function getDMChannelId(userA: string, userB: string): string {
+  return [userA, userB].sort().join('_');
+}
+
+/** Delete old DM signals for a channel */
+export async function cleanOldDMSignals(channelId: string): Promise<void> {
+  const { error } = await supabase
+    .from('dm_signals')
+    .delete()
+    .eq('channel_id', channelId);
+
+  if (error) {
+    console.warn('[friends-chat] Could not clean old DM signals:', error.message);
+  }
+}
+
+export async function sendDMSignal(
+  channelId: string,
+  senderId: string,
+  type: DMSignal['type'],
+  payload: Record<string, unknown>,
+  targetId?: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('dm_signals')
+    .insert({
+      channel_id: channelId,
+      sender_id: senderId,
+      target_id: targetId ?? null,
+      type,
+      payload,
+    });
+
+  if (error) throw error;
+}
+
+export function subscribeToDMSignals(
+  channelId: string,
+  currentUserId: string,
+  onSignal: (signal: DMSignal) => void,
+) {
+  const channel = supabase
+    .channel(`dm-signals-${channelId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'dm_signals',
+        filter: `channel_id=eq.${channelId}`,
+      },
+      (payload) => {
+        const signal = payload.new as DMSignal;
+        // Ignore own signals
+        if (signal.sender_id === currentUserId) return;
+        // Ignore signals not targeted at us
+        if (signal.target_id && signal.target_id !== currentUserId) return;
+        onSignal(signal);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

@@ -7,9 +7,10 @@
   flex-direction: column;
   height: 100vh;
   width: 100%;
-  background: #000000;
+  background-image: repeating-linear-gradient(144deg, rgb(88, 88, 88) 0px, rgb(88, 88, 88) 95px,rgb(204, 204, 204) 95px, rgb(204, 204, 204) 190px,rgb(184, 184, 184) 190px, rgb(184, 184, 184) 285px,rgb(223, 223, 223) 285px, rgb(223, 223, 223) 380px,rgb(107, 107, 107) 380px, rgb(107, 107, 107) 475px,rgb(127, 127, 127) 475px, rgb(127, 127, 127) 570px,rgb(146, 146, 146) 570px, rgb(146, 146, 146) 665px,rgb(165, 165, 165) 665px, rgb(165, 165, 165) 760px);
   color: #e0e0e0;
   position: relative;
+  overflow: hidden;
 }
 
 /* ── Header ── */
@@ -23,6 +24,7 @@
   backdrop-filter: blur(24px);
   flex-shrink: 0;
   z-index: 20;
+  justify-content: space-between;
 }
 
 .fc-back-btn {
@@ -472,6 +474,445 @@
   height: 16px;
 }
 
+/* ── Header Actions ── */
+.fc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fc-call-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.fc-call-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.fc-call-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Call Overlay ── */
+.fc-call-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.fc-call-overlay.audio {
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem 1.5rem;
+}
+
+.fc-call-videos {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.fc-remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.fc-local-video {
+  position: absolute;
+  bottom: 80px;
+  right: 16px;
+  width: 120px;
+  height: auto;
+  max-height: 160px;
+  aspect-ratio: auto;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #1a1a2e;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+  z-index: 3;
+}
+
+.fc-call-overlay.audio .fc-call-videos {
+  display: none;
+}
+
+.fc-audio-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.fc-audio-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+  animation: fcAudioPulse 2s ease-in-out infinite;
+}
+
+.fc-audio-avatar svg {
+  width: 32px;
+  height: 32px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes fcAudioPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+  }
+}
+
+.fc-call-status {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  font-weight: 500;
+  z-index: 5;
+}
+
+.fc-call-timer {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.6rem;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 6;
+}
+
+.fc-call-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+
+.fc-call-overlay.audio .fc-call-status {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  text-align: center;
+}
+
+.fc-call-overlay.audio .fc-call-timer {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  font-size: 3.5rem;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  padding: 0;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.fc-call-overlay.audio .fc-call-controls {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+}
+
+.fc-call-ctrl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.fc-call-ctrl-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+}
+
+.fc-call-ctrl-btn:active {
+  transform: translateY(0);
+}
+
+.fc-call-ctrl-btn.off {
+  background: linear-gradient(135deg, rgba(255, 80, 80, 0.25), rgba(255, 80, 80, 0.15));
+  color: #ff8888;
+}
+
+.fc-call-ctrl-btn.off:hover {
+  background: linear-gradient(135deg, rgba(255, 80, 80, 0.4), rgba(255, 80, 80, 0.28));
+  transform: translateY(-2px);
+}
+
+.fc-call-ctrl-btn.hangup {
+  background: linear-gradient(135deg, rgba(255, 70, 70, 0.9), rgba(255, 50, 50, 0.8));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255, 70, 70, 0.3);
+  width: 48px;
+  height: 48px;
+}
+
+.fc-call-ctrl-btn.hangup:hover {
+  background: linear-gradient(135deg, rgba(255, 50, 50, 1), rgba(255, 30, 30, 0.95));
+  box-shadow: 0 6px 28px rgba(255, 70, 70, 0.45);
+  transform: translateY(-2px);
+}
+
+.fc-call-ctrl-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Incoming Call Overlay ── */
+.fc-incoming-call-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fcIncomingFadeIn 0.3s ease-out;
+}
+
+@keyframes fcIncomingFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fc-incoming-call-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 2.5rem 3rem;
+  border-radius: 24px;
+  background: rgba(20, 20, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  animation: fcIncomingSlideUp 0.35s ease-out;
+}
+
+@keyframes fcIncomingSlideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fc-incoming-call-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fcIncomingPulse 1.5s ease-in-out infinite;
+}
+
+.fc-incoming-call-icon svg {
+  width: 32px;
+  height: 32px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@keyframes fcIncomingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(80, 200, 120, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 16px rgba(80, 200, 120, 0);
+    transform: scale(1.05);
+  }
+}
+
+.fc-incoming-call-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.fc-incoming-call-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.fc-incoming-accept,
+.fc-incoming-reject {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 14px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fc-incoming-accept svg,
+.fc-incoming-reject svg {
+  width: 18px;
+  height: 18px;
+}
+
+.fc-incoming-accept {
+  background: linear-gradient(135deg, rgba(80, 200, 120, 0.9), rgba(60, 180, 100, 0.85));
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(80, 200, 120, 0.3);
+}
+
+.fc-incoming-accept:hover {
+  background: linear-gradient(135deg, rgba(80, 200, 120, 1), rgba(60, 180, 100, 1));
+  box-shadow: 0 6px 24px rgba(80, 200, 120, 0.45);
+  transform: translateY(-2px);
+}
+
+.fc-incoming-reject {
+  background: linear-gradient(135deg, rgba(255, 70, 70, 0.95), rgba(220, 30, 30, 0.95));
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(255, 60, 60, 0.28);
+}
+
+.fc-incoming-reject:hover {
+  background: linear-gradient(135deg, rgba(255, 40, 40, 1), rgba(200, 20, 20, 1));
+  box-shadow: 0 10px 36px rgba(255, 60, 60, 0.36);
+  transform: translateY(-3px);
+}
+
+.fc-incoming-reject-icon {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+  transform: rotate(136deg);
+}
+
+/* ── Line Busy Modal ── */
+.fc-line-busy-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fcLineBusyFadeIn 0.2s ease-out;
+}
+
+@keyframes fcLineBusyFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fc-line-busy-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 2.5rem;
+  border-radius: 20px;
+  background: rgba(30, 30, 40, 0.95);
+  border: 1px solid rgba(255, 150, 100, 0.2);
+  box-shadow: 0 12px 40px rgba(255, 150, 100, 0.1);
+  max-width: 320px;
+  text-align: center;
+}
+
+.fc-line-busy-card svg {
+  width: 56px;
+  height: 56px;
+  color: rgba(255, 150, 100, 0.8);
+}
+
+.fc-line-busy-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 200, 100, 0.95);
+  margin: 0.5rem 0 0;
+}
+
+.fc-line-busy-card p {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.5rem 0 0;
+  line-height: 1.4;
+}
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
   .fc-file-preview {
@@ -479,5 +920,16 @@
   }
   .fc-msg {
     max-width: 90%;
+  }
+  .fc-call-overlay.audio .fc-call-timer {
+    font-size: 2.5rem;
+  }
+  .fc-call-ctrl-btn {
+    width: 48px;
+    height: 48px;
+  }
+  .fc-call-ctrl-btn svg {
+    width: 20px;
+    height: 20px;
   }
 }
