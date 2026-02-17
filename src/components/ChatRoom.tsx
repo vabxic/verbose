@@ -13,10 +13,15 @@ import type { Room, RoomMessage, RoomParticipant } from '../lib/rooms';
 import { WebRTCService } from '../lib/webrtc';
 import type { CallType } from '../lib/webrtc';
 import { saveRoom, unsaveRoom, isRoomSaved, sendFriendRequest } from '../lib/social';
-import { uploadRoomFile, formatFileSize } from '../lib/drive';
+import { uploadRoomFile, formatFileSize, getFileUrl } from '../lib/drive';
 import type { UploadProgress } from '../lib/drive';
 import RoomDrive from './RoomDrive';
 import './ChatRoom.css';
+
+// Helper: check mime types for inline preview
+function isImageMime(mime: string): boolean { return mime.startsWith('image/'); }
+function isVideoMime(mime: string): boolean { return mime.startsWith('video/'); }
+function isAudioMime(mime: string): boolean { return mime.startsWith('audio/'); }
 
 interface ChatRoomProps {
   room: Room;
@@ -62,6 +67,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   // Mobile more-menu state
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // File preview state
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -505,8 +513,20 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       const uploaded = await uploadRoomFile(room.id, user.id, displayName, file, (p) =>
         setInlineUploadProgress(p),
       );
-      // Send a file message in chat so other users see it inline
-      await sendMessage(room.id, user.id, displayName, `📎 ${uploaded.file_name} (${formatFileSize(uploaded.file_size)})`, 'file');
+      // Get a URL for the uploaded file
+      let fileUrl = '';
+      try {
+        fileUrl = await getFileUrl(uploaded);
+      } catch { /* best-effort */ }
+      // Encode file metadata as JSON in the message content
+      const fileMeta = JSON.stringify({
+        fileName: uploaded.file_name,
+        fileSize: uploaded.file_size,
+        mimeType: uploaded.mime_type || 'application/octet-stream',
+        url: fileUrl,
+        fileId: uploaded.id,
+      });
+      await sendMessage(room.id, user.id, displayName, fileMeta, 'file');
     } catch (err) {
       console.error('[ChatRoom] Upload error:', err);
       alert('Upload failed: ' + (err as Error).message);
@@ -570,28 +590,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         </div>
 
         <div className="chatroom-header-actions">
-          {/* ── Desktop utility actions (hidden on mobile) ── */}
+          {/* ── Room code badge (always visible on desktop) ── */}
           <div className="chatroom-actions-desktop">
-            <button
-              className={`chatroom-hdr-btn${roomSaved ? ' active' : ''}`}
-              onClick={handleToggleSaveRoom}
-              disabled={savingRoom}
-              title={roomSaved ? 'Unsave room' : 'Save room'}
-            >
-              <svg viewBox="0 0 24 24" fill={roomSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-              </svg>
-            </button>
-
-            <button className="chatroom-hdr-btn" onClick={() => setShowFriendReqModal(true)} title="Add friend">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <line x1="20" y1="8" x2="20" y2="14" />
-                <line x1="23" y1="11" x2="17" y2="11" />
-              </svg>
-            </button>
-
             <button className="chatroom-hdr-btn chatroom-code-badge" onClick={copyCode} title="Copy room code">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -600,27 +600,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
               <span className="chatroom-code-text">{room.code}</span>
               {showCopied && <span className="chatroom-copied-toast">Copied!</span>}
             </button>
-
-            <button className="chatroom-hdr-btn" onClick={shareLink} title="Copy invite link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-              </svg>
-              {showLinkCopied && <span className="chatroom-copied-toast">Link copied!</span>}
-            </button>
-
-            <button
-              className={`chatroom-hdr-btn${showDrive ? ' active' : ''}`}
-              onClick={() => setShowDrive((v) => !v)}
-              title={showDrive ? 'Close drive' : 'Room Drive'}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-              </svg>
-            </button>
           </div>
 
-          {/* ── Mobile more-menu (hidden on desktop) ── */}
+          {/* ── More menu (3-dot) – visible on both desktop & mobile ── */}
           <div className="chatroom-more-wrapper" ref={moreMenuRef}>
             <button
               className={`chatroom-hdr-btn chatroom-more-trigger${showMoreMenu ? ' active' : ''}`}
@@ -914,6 +896,19 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         </div>
       )}
 
+      {/* ── Expanded image viewer ───────── */}
+      {expandedImage && (
+        <div className="chatroom-image-viewer" onClick={() => setExpandedImage(null)}>
+          <img src={expandedImage} alt="Preview" />
+          <button className="chatroom-image-close" onClick={() => setExpandedImage(null)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* ── Messages ───────────────────── */}
       <div className="chatroom-messages">
         {messages.length === 0 && (
@@ -942,6 +937,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             );
           }
 
+          // Parse file metadata for file messages
+          let fileMeta: { fileName: string; fileSize: number; mimeType: string; url: string } | null = null;
+          if (msg.type === 'file') {
+            try {
+              fileMeta = JSON.parse(msg.content);
+            } catch {
+              // Legacy format: plain text file message
+            }
+          }
+
           return (
             <div
               key={msg.id}
@@ -951,7 +956,37 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                 <span className="chatroom-msg-sender">{msg.sender_name}</span>
               )}
               <div className="chatroom-msg-bubble">
-                <span className="chatroom-msg-text">{msg.content}</span>
+                {fileMeta && fileMeta.url ? (
+                  <div className="chatroom-file-preview">
+                    {isImageMime(fileMeta.mimeType) ? (
+                      <img
+                        src={fileMeta.url}
+                        alt={fileMeta.fileName}
+                        className="chatroom-file-image"
+                        onClick={() => setExpandedImage(fileMeta!.url)}
+                      />
+                    ) : isVideoMime(fileMeta.mimeType) ? (
+                      <video src={fileMeta.url} controls className="chatroom-file-video" />
+                    ) : isAudioMime(fileMeta.mimeType) ? (
+                      <audio src={fileMeta.url} controls className="chatroom-file-audio" />
+                    ) : (
+                      <a href={fileMeta.url} target="_blank" rel="noopener noreferrer" className="chatroom-file-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="20" height="20">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </a>
+                    )}
+                    <div className="chatroom-file-info">
+                      <span className="chatroom-file-name">{fileMeta.fileName}</span>
+                      <span className="chatroom-file-size">{formatFileSize(fileMeta.fileSize)}</span>
+                    </div>
+                  </div>
+                ) : msg.type === 'file' ? (
+                  <span className="chatroom-msg-text">{msg.content}</span>
+                ) : (
+                  <span className="chatroom-msg-text">{msg.content}</span>
+                )}
                 <span className="chatroom-msg-time">{formatTime(msg.created_at)}</span>
               </div>
             </div>

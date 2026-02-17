@@ -4,6 +4,7 @@ import { Logo } from './Logo';
 import ProfileAvatar from './ProfileAvatar';
 import LoginPage from './LoginPage';
 import ChatRoom from './ChatRoom';
+import FriendChat from './FriendChat';
 import BackgroundHome from './background_home';
 import { createRoom, joinRoomByCode, sendMessage } from '../lib/rooms';
 import type { Room } from '../lib/rooms';
@@ -20,9 +21,17 @@ import {
   subscribeToFriendRequests,
 } from '../lib/social';
 import type { SavedRoom, FriendRequest } from '../lib/social';
+import {
+  setOnline,
+  setOffline,
+  getPresence,
+  subscribeToPresence,
+  getFriendUserId,
+  getFriendName,
+} from '../lib/friends-chat';
 import './HomePage.css';
 
-type View = 'home' | 'chat';
+type View = 'home' | 'chat' | 'friend-chat';
 
 const SESSION_ROOM_KEY = 'verbose_active_room';
 
@@ -65,6 +74,21 @@ export const HomePage: React.FC = () => {
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [processingReqId, setProcessingReqId] = useState<string | null>(null);
 
+  // Friend chat state
+  const [activeFriendId, setActiveFriendId] = useState<string | null>(null);
+  const [activeFriendName, setActiveFriendName] = useState<string>('');
+
+  // Presence state
+  const [presenceMap, setPresenceMap] = useState<Record<string, boolean>>({});
+
+  // Incoming call notification on home page
+  const [homeIncomingCall, setHomeIncomingCall] = useState<{
+    callerName: string;
+    callType: 'audio' | 'video';
+    roomCode: string;
+    roomId: string;
+  } | null>(null);
+
   const displayName = isAnonymous
     ? 'Guest'
     : user?.user_metadata?.full_name ||
@@ -103,6 +127,28 @@ export const HomePage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Presence: set online on mount, offline on unmount ──
+  useEffect(() => {
+    if (!user?.id || isAnonymous) return;
+    setOnline(user.id);
+
+    const handleBeforeUnload = () => {
+      setOffline(user.id);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Heartbeat: update presence every 30s
+    const interval = setInterval(() => {
+      setOnline(user.id);
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearInterval(interval);
+      setOffline(user.id);
+    };
+  }, [user?.id, isAnonymous]);
 
   // ── Auto-join from URL ?join=CODE param ──────
   useEffect(() => {
@@ -189,6 +235,33 @@ export const HomePage: React.FC = () => {
     });
     return unsub;
   }, [user?.id, isAnonymous, loadFriendData]);
+
+  // ── Load friends presence ──────────────────────
+  useEffect(() => {
+    if (!user?.id || isAnonymous || friends.length === 0) return;
+
+    const friendUserIds = friends.map((f) => getFriendUserId(f, user.id));
+
+    // Initial load
+    getPresence(friendUserIds).then((presenceList) => {
+      const map: Record<string, boolean> = {};
+      for (const p of presenceList) {
+        map[p.user_id] = p.is_online;
+      }
+      setPresenceMap(map);
+    });
+
+    // Subscribe
+    const unsub = subscribeToPresence(friendUserIds, (presenceList) => {
+      const map: Record<string, boolean> = {};
+      for (const p of presenceList) {
+        map[p.user_id] = p.is_online;
+      }
+      setPresenceMap(map);
+    });
+
+    return unsub;
+  }, [user?.id, isAnonymous, friends]);
 
   // ── Friend request handlers ──────────────────
   const handleAcceptRequest = async (reqId: string) => {
@@ -302,6 +375,41 @@ export const HomePage: React.FC = () => {
     setActiveView('home');
   };
 
+  // ── Open friend chat ──────────────────────────
+  const handleOpenFriendChat = (friendReq: FriendRequest) => {
+    if (!user?.id) return;
+    const fId = getFriendUserId(friendReq, user.id);
+    const fName = getFriendName(friendReq, user.id);
+    setActiveFriendId(fId);
+    setActiveFriendName(fName);
+    setActiveView('friend-chat');
+  };
+
+  const handleLeaveFriendChat = () => {
+    setActiveFriendId(null);
+    setActiveFriendName('');
+    setActiveView('home');
+  };
+
+  // ── Accept incoming call from home ────────────
+  const handleAcceptHomeCall = async () => {
+    if (!homeIncomingCall || !user?.id) return;
+    try {
+      const { room } = await joinRoomByCode(homeIncomingCall.roomCode, user.id, displayName);
+      await sendMessage(room.id, user.id, displayName, `${displayName} joined the room`, 'system');
+      setActiveRoom(room);
+      setActiveView('chat');
+      setHomeIncomingCall(null);
+    } catch (err) {
+      console.error('[HomePage] Failed to join call room:', err);
+      setHomeIncomingCall(null);
+    }
+  };
+
+  const handleRejectHomeCall = () => {
+    setHomeIncomingCall(null);
+  };
+
   // Show login page for account upgrade
   if (showLoginUpgrade) {
     return <LoginPage onBack={() => setShowLoginUpgrade(false)} hideGuestTab />;
@@ -310,6 +418,18 @@ export const HomePage: React.FC = () => {
   // Show ChatRoom when active
   if (activeView === 'chat' && activeRoom) {
     return <ChatRoom room={activeRoom} onLeave={handleLeaveRoom} />;
+  }
+
+  // Show FriendChat when active
+  if (activeView === 'friend-chat' && activeFriendId) {
+    return (
+      <FriendChat
+        friendId={activeFriendId}
+        friendName={activeFriendName}
+        isOnline={!!presenceMap[activeFriendId]}
+        onBack={handleLeaveFriendChat}
+      />
+    );
   }
 
   return (
@@ -379,18 +499,6 @@ export const HomePage: React.FC = () => {
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
-          {/* Find People icon */}
-          <button className="home-header-icon-btn home-find-people-header-btn" aria-label="Find People" title="Find People" onClick={() => { setShowFindPeople(true); loadFriendData(); }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            {pendingCount > 0 && (
-              <span className="home-notification-badge">{pendingCount}</span>
-            )}
-          </button>
           <ProfileAvatar />
         </div>
       </header>
@@ -457,6 +565,81 @@ export const HomePage: React.FC = () => {
           {/* (Voice & Video call cards removed) */}
         </div>
 
+        {/* ── Friends Card Section ── */}
+        {!isAnonymous && (
+          <div className="home-friends-section">
+            <div className="home-friends-section-header">
+              <h2 className="home-friends-section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Friends
+                {pendingCount > 0 && (
+                  <span className="home-friends-badge">{pendingCount} pending</span>
+                )}
+              </h2>
+              <button
+                className="home-friends-manage-btn"
+                onClick={() => { setShowFindPeople(true); loadFriendData(); }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <line x1="20" y1="8" x2="20" y2="14" />
+                  <line x1="23" y1="11" x2="17" y2="11" />
+                </svg>
+                Manage
+              </button>
+            </div>
+
+            {friends.length === 0 ? (
+              <div className="home-friends-empty">
+                <p>No friends yet. Add friends from a chat room!</p>
+                <button
+                  className="home-friends-find-btn"
+                  onClick={() => { setShowFindPeople(true); loadFriendData(); }}
+                >
+                  Find People
+                </button>
+              </div>
+            ) : (
+              <div className="home-friends-grid">
+                {friends.map((f) => {
+                  const fId = getFriendUserId(f, user!.id);
+                  const fName = getFriendName(f, user!.id);
+                  const isOnline = !!presenceMap[fId];
+                  return (
+                    <div
+                      key={f.id}
+                      className="home-friend-card"
+                      onClick={() => handleOpenFriendChat(f)}
+                    >
+                      <div className="home-friend-avatar-wrapper">
+                        <div className="home-friend-avatar">
+                          {fName[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <span className={`home-friend-status-dot ${isOnline ? 'online' : 'offline'}`} />
+                      </div>
+                      <div className="home-friend-info">
+                        <span className="home-friend-name">{fName}</span>
+                        <span className={`home-friend-status-text ${isOnline ? 'online' : ''}`}>
+                          {isOnline ? 'Online' : 'Offline'}
+                        </span>
+                      </div>
+                      <svg className="home-friend-chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Saved Rooms Section ── */}
         {!isAnonymous && savedRooms.length > 0 && (
           <div className="home-saved-rooms">
@@ -492,6 +675,41 @@ export const HomePage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* ── Incoming Call Notification (Home Page) ── */}
+      {homeIncomingCall && (
+        <div className="home-call-notification-overlay">
+          <div className="home-call-notification-card">
+            <div className="home-call-notification-icon">
+              {homeIncomingCall.callType === 'video' ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="28" height="28">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="28" height="28">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+              )}
+            </div>
+            <div className="home-call-notification-info">
+              <h3>Incoming {homeIncomingCall.callType} call</h3>
+              <p>{homeIncomingCall.callerName}</p>
+            </div>
+            <div className="home-call-notification-actions">
+              <button className="home-call-accept" onClick={handleAcceptHomeCall}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                Accept
+              </button>
+              <button className="home-call-reject" onClick={handleRejectHomeCall}>
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Find People Panel ── */}
       {showFindPeople && (

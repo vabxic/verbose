@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS public.user_cloud_settings (
 
 ALTER TABLE public.user_cloud_settings ENABLE ROW LEVEL SECURITY;
 
+-- Drop and re-create policies (idempotent)
+DROP POLICY IF EXISTS "Users can read own cloud settings" ON public.user_cloud_settings;
+DROP POLICY IF EXISTS "Users can insert own cloud settings" ON public.user_cloud_settings;
+DROP POLICY IF EXISTS "Users can update own cloud settings" ON public.user_cloud_settings;
+DROP POLICY IF EXISTS "Users can delete own cloud settings" ON public.user_cloud_settings;
+
 -- Users can only see their own cloud settings
 CREATE POLICY "Users can read own cloud settings"
   ON public.user_cloud_settings FOR SELECT

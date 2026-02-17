@@ -7,7 +7,7 @@
   flex-direction: row;
   height: 100vh;
   width: 100%;
-  background: #000000;
+  background-image: repeating-linear-gradient(144deg, rgb(88, 88, 88) 0px, rgb(88, 88, 88) 95px,rgb(204, 204, 204) 95px, rgb(204, 204, 204) 190px,rgb(184, 184, 184) 190px, rgb(184, 184, 184) 285px,rgb(223, 223, 223) 285px, rgb(223, 223, 223) 380px,rgb(107, 107, 107) 380px, rgb(107, 107, 107) 475px,rgb(127, 127, 127) 475px, rgb(127, 127, 127) 570px,rgb(146, 146, 146) 570px, rgb(146, 146, 146) 665px,rgb(165, 165, 165) 665px, rgb(165, 165, 165) 760px);
   color: #e0e0e0;
   position: relative;
   overflow: hidden;
@@ -300,7 +300,7 @@
 
 /* ── Mobile more-menu ───────────────────────── */
 .chatroom-more-wrapper {
-  display: none; /* hidden on desktop */
+  display: block; /* visible on both desktop and mobile */
   position: relative;
 }
 
@@ -703,7 +703,6 @@
   gap: 0.6rem;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-  background: #000000;
 }
 
 .chatroom-messages::-webkit-scrollbar {
@@ -844,7 +843,6 @@
   background: rgba(40, 40, 50, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-bottom-right-radius: 6px;
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
   color: #ffffff;
 }
 
@@ -852,7 +850,6 @@
   background: rgba(30, 30, 40, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-bottom-left-radius: 6px;
-  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.95);
 }
 
@@ -1158,12 +1155,9 @@
 
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 768px) {
-  /* Show more-menu trigger, hide desktop actions */
+  /* On mobile, hide the desktop room code, only show 3-dot menu */
   .chatroom-actions-desktop {
     display: none;
-  }
-  .chatroom-more-wrapper {
-    display: block;
   }
 
   .chatroom-header {
@@ -1498,3 +1492,111 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* ── File Preview in Chat Messages ── */
+.chatroom-file-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 300px;
+}
+
+.chatroom-file-image {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 12px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.chatroom-file-image:hover {
+  opacity: 0.85;
+}
+
+.chatroom-file-video {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 12px;
+}
+
+.chatroom-file-audio {
+  width: 100%;
+  max-width: 280px;
+  height: 40px;
+}
+
+.chatroom-file-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: all 0.2s;
+}
+.chatroom-file-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chatroom-file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.25rem;
+}
+
+.chatroom-file-name {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.chatroom-file-size {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+/* ── Expanded Image Viewer ── */
+.chatroom-image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+.chatroom-image-viewer img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.chatroom-image-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.chatroom-image-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+

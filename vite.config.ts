@@ -12,5 +12,13 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    rollupOptions: {
+      external: [],
+    },
+  },
+  esbuild: {
+    logOverride: {
+      'unsupported-css-property': 'silent',
+    },
   },
 });

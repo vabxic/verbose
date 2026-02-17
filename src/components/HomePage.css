@@ -1000,3 +1000,310 @@
     padding: 0.75rem 1rem;
   }
 }
+
+/* ══════════════════════════════════════════════════
+   Friends Section (Card on Home)
+   ══════════════════════════════════════════════════ */
+.home-friends-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.home-friends-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.home-friends-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+  color: #fff;
+  margin: 0;
+}
+
+.home-friends-section-title svg {
+  color: rgba(100, 180, 255, 0.8);
+}
+
+.home-friends-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 71, 87, 0.15);
+  color: #ff4757;
+  margin-left: 0.5rem;
+}
+
+.home-friends-manage-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.home-friends-manage-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.home-friends-empty {
+  text-align: center;
+  padding: 1.5rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+.home-friends-empty p {
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.home-friends-find-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.home-friends-find-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.home-friends-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.home-friend-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.home-friend-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.home-friend-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.home-friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.home-friend-status-dot {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(10, 10, 20, 0.9);
+}
+.home-friend-status-dot.online {
+  background: #50c878;
+  box-shadow: 0 0 6px rgba(80, 200, 120, 0.4);
+}
+.home-friend-status-dot.offline {
+  background: #555;
+}
+
+.home-friend-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.home-friend-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-friend-status-text {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+.home-friend-status-text.online {
+  color: rgba(80, 200, 120, 0.8);
+}
+
+.home-friend-chat-icon {
+  color: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.home-friend-card:hover .home-friend-chat-icon {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ══════════════════════════════════════════════════
+   Incoming Call Notification (Home Page)
+   ══════════════════════════════════════════════════ */
+.home-call-notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  justify-content: center;
+  padding-top: 1.5rem;
+  pointer-events: none;
+  animation: homeCallSlideIn 0.4s ease;
+}
+
+@keyframes homeCallSlideIn {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.home-call-notification-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-radius: 16px;
+  background: rgba(12, 12, 24, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  pointer-events: all;
+  animation: homeCallPulse 2s ease-in-out infinite;
+}
+
+@keyframes homeCallPulse {
+  0%, 100% { box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5); }
+  50% { box-shadow: 0 8px 40px rgba(80, 200, 120, 0.2), 0 0 20px rgba(80, 200, 120, 0.1); }
+}
+
+.home-call-notification-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(80, 200, 120, 0.15);
+  color: #50c878;
+  flex-shrink: 0;
+  animation: homeCallRing 1.5s ease-in-out infinite;
+}
+
+@keyframes homeCallRing {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(-10deg); }
+  20% { transform: rotate(10deg); }
+  30% { transform: rotate(-10deg); }
+  40% { transform: rotate(10deg); }
+  50% { transform: rotate(0deg); }
+}
+
+.home-call-notification-info {
+  flex: 1;
+}
+.home-call-notification-info h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.15rem;
+}
+.home-call-notification-info p {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+.home-call-notification-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.home-call-accept {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: rgba(80, 200, 120, 0.2);
+  color: #50c878;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.home-call-accept:hover {
+  background: rgba(80, 200, 120, 0.3);
+}
+
+.home-call-reject {
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff6b6b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.home-call-reject:hover {
+  background: rgba(255, 80, 80, 0.25);
+}
+
+/* ── Responsive: Friends & Call notification ── */
+@media (max-width: 768px) {
+  .home-friends-section {
+    padding: 1rem;
+  }
+
+  .home-call-notification-card {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0 1rem;
+  }
+}

@@ -109,58 +109,88 @@ class GoogleDriveProvider implements CloudProvider {
         return;
       }
 
-      // Poll the popup for the OAuth redirect with the token in the hash
-      const interval = setInterval(async () => {
+      // Listen for postMessage from the callback page (avoids COOP issues)
+      const onMessage = async (event: MessageEvent) => {
+        // Only accept messages from our own origin
+        if (event.origin !== window.location.origin) return;
+
+        if (event.data?.type === 'google-drive-oauth-error') {
+          cleanup();
+          reject(new Error(event.data.error || 'Authorization failed.'));
+          return;
+        }
+
+        if (event.data?.type !== 'google-drive-oauth-result') return;
+
+        cleanup();
+
+        const { accessToken: token, expiresIn: expIn, state: returnedState } = event.data;
+
+        if (returnedState !== state) {
+          reject(new Error('OAuth state mismatch.'));
+          return;
+        }
+
+        if (!token) {
+          reject(new Error('No access token received.'));
+          return;
+        }
+
+        const expiresIn = parseInt(expIn || '3600', 10);
+
         try {
-          if (popup.closed) {
-            clearInterval(interval);
-            reject(new Error('Authorization cancelled.'));
-            return;
-          }
-          // Cross-origin until it redirects to our origin
-          const popupUrl = popup.location.href;
-          if (!popupUrl.startsWith(window.location.origin)) return;
-
-          clearInterval(interval);
-          popup.close();
-
-          const hash = new URL(popupUrl).hash.substring(1);
-          const params = new URLSearchParams(hash);
-
-          const returnedState = params.get('state');
-          if (returnedState !== state) {
-            reject(new Error('OAuth state mismatch.'));
-            return;
-          }
-
-          const accessToken = params.get('access_token');
-          const expiresIn = parseInt(params.get('expires_in') || '3600', 10);
-
-          if (!accessToken) {
-            reject(new Error('No access token received.'));
-            return;
-          }
-
           // Fetch user email from Google
           const userResp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-            headers: { Authorization: `Bearer ${accessToken}` },
+            headers: { Authorization: `Bearer ${token}` },
           });
           const userInfo = await userResp.json();
 
           resolve({
-            accessToken,
+            accessToken: token,
             email: userInfo.email ?? '',
             expiresAt: new Date(Date.now() + expiresIn * 1000),
           });
-        } catch {
-          // Cross-origin errors are expected until redirect completes
+        } catch (err) {
+          reject(new Error('Failed to fetch user info from Google.'));
         }
-      }, 500);
+      };
+
+      // Also poll popup.closed as a fallback (some browsers allow it)
+      const closedPoll = setInterval(() => {
+        try {
+          if (popup.closed) {
+            cleanup();
+            // Check sessionStorage fallback (for non-opener scenarios)
+            const stored = sessionStorage.getItem('gdrive_oauth_result');
+            if (stored) {
+              sessionStorage.removeItem('gdrive_oauth_result');
+              const data = JSON.parse(stored);
+              onMessage({ origin: window.location.origin, data } as MessageEvent);
+            } else {
+              reject(new Error('Authorization cancelled.'));
+            }
+          }
+        } catch {
+          // COOP may block this — that's fine, postMessage will handle it
+        }
+      }, 1000);
+
+      window.addEventListener('message', onMessage);
+
+      function cleanup() {
+        window.removeEventListener('message', onMessage);
+        clearInterval(closedPoll);
+        clearTimeout(timeout);
+        try {
+          popup?.close();
+        } catch (err) {
+          // Ignore errors when closing the popup (COOP / blocked)
+        }
+      }
 
       // Timeout after 5 minutes
-      setTimeout(() => {
-        clearInterval(interval);
-        try { popup.close(); } catch {}
+      const timeout = setTimeout(() => {
+        cleanup();
         reject(new Error('Authorization timed out.'));
       }, 5 * 60 * 1000);
     });

@@ -218,8 +218,8 @@ const GoogleDriveIcon: React.FC = () => (
 );
 
 const DropboxIcon: React.FC = () => (
-  <svg viewBox="0 0 24 24" fill="#0061fe" width="22" height="20">
-    <path d="M12 2L6 6l6 4-6 4 6 4 6-4-6-4 6-4-6-4zm-6 8l-6-4 6-4 6 4-6 4zm12 0l6-4-6-4-6 4 6 4zm-12 4l-6-4 6-4 6 4-6 4zm12 0l6-4-6-4-6 4 6 4z" />
+  <svg viewBox="0 0 24 24" width="22" height="20">
+    <path fill="#0061FE" d="M6 1.5L0 5l6 3.5L0 12l6 3.5 6-3.5-6-3.5L12 5l-6-3.5zm6 0L6 5l6 3.5L18 5l-6-3.5zm6 7L12 12l6 3.5 6-3.5-6-3.5zM6 15.5L0 12l6-3.5L12 12l-6 3.5zm6 0l6-3.5 6 3.5-6 3.5-6-3.5z" transform="translate(0, 2.5)" />
   </svg>
 );
 
