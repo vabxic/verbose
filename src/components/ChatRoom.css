@@ -309,10 +309,10 @@
 }
 
 .chatroom-call-overlay.audio {
-  justify-content: center;
-  gap: 1.5rem;
+  justify-content: space-between;
+  gap: 0;
   flex-direction: column;
-  padding: 2rem 1.5rem;
+  padding: 3rem 1.5rem 2rem;
 }
 
 .chatroom-call-videos {
@@ -359,8 +359,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  padding: 1rem;
+  gap: 2rem;
+  padding: 2rem 1rem;
+  flex: 1;
 }
 
 .chatroom-audio-avatar {
@@ -454,7 +455,8 @@
   justify-content: center;
   width: 100%;
   max-width: 640px;
-  margin: 0 auto;
+  margin: auto auto 0;
+  order: 3;
 }
 
 .chatroom-call-overlay.audio .chatroom-call-status {
@@ -462,7 +464,8 @@
   top: auto;
   left: auto;
   transform: none;
-  margin: 0 auto 0.5rem;
+  margin: 0.75rem auto 0;
+  order: 2;
 }
 
 .chatroom-call-overlay.audio .chatroom-call-timer {
@@ -470,12 +473,14 @@
   top: auto;
   left: auto;
   transform: none;
-  margin: 0 auto 1rem;
-  font-size: 2rem;
+  margin: 1.5rem auto 0;
+  font-size: 3.5rem;
   font-weight: 700;
   background: transparent;
   border: none;
   padding: 0;
+  order: 1;
+  letter-spacing: 0.1em;
 }
 
 .chatroom-call-btn {
@@ -1029,8 +1034,16 @@
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 768px) {
   .chatroom-header {
-    padding: 0.7rem 0.85rem;
+    padding: 0.7rem 0.75rem;
     gap: 0.5rem;
+  }
+
+  .chatroom-header-left {
+    gap: 0.6rem;
+  }
+
+  .chatroom-header-actions {
+    gap: 0.35rem;
   }
 
   .chatroom-room-name {
@@ -1117,11 +1130,39 @@
   }
 
   .chatroom-header {
-    padding: 0.65rem 0.7rem;
+    padding: 0.6rem 0.65rem;
+  }
+
+  .chatroom-header-left {
+    gap: 0.5rem;
+  }
+
+  .chatroom-header-actions {
+    gap: 0.3rem;
+  }
+
+  .chatroom-back-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chatroom-back-btn svg {
+    width: 16px;
+    height: 16px;
   }
 
   .chatroom-room-name {
     font-size: 0.9rem;
+  }
+
+  .chatroom-action-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chatroom-action-btn svg {
+    width: 14px;
+    height: 14px;
   }
 
   .chatroom-call-overlay.video {
