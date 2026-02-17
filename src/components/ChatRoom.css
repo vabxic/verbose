@@ -309,10 +309,11 @@
 }
 
 .chatroom-call-overlay.audio {
-  justify-content: space-between;
-  gap: 0;
+  justify-content: center;
+  gap: 2rem;
   flex-direction: column;
-  padding: 3rem 1.5rem 2rem;
+  padding: 2rem 1.5rem;
+  align-items: center;
 }
 
 .chatroom-call-videos {
@@ -359,9 +360,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
-  padding: 2rem 1rem;
-  flex: 1;
+  gap: 1.5rem;
+  padding: 1rem;
+  flex: none;
+  order: 0;
 }
 
 .chatroom-audio-avatar {
@@ -453,10 +455,13 @@
   position: static;
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
-  max-width: 640px;
-  margin: auto auto 0;
+  max-width: 480px;
+  margin: 0 auto;
   order: 3;
+  padding: 0.8rem 1.5rem;
+  border-radius: 24px;
 }
 
 .chatroom-call-overlay.audio .chatroom-call-status {
@@ -464,8 +469,9 @@
   top: auto;
   left: auto;
   transform: none;
-  margin: 0.75rem auto 0;
+  margin: 0;
   order: 2;
+  text-align: center;
 }
 
 .chatroom-call-overlay.audio .chatroom-call-timer {
@@ -473,7 +479,7 @@
   top: auto;
   left: auto;
   transform: none;
-  margin: 1.5rem auto 0;
+  margin: 0;
   font-size: 3.5rem;
   font-weight: 700;
   background: transparent;
@@ -481,14 +487,15 @@
   padding: 0;
   order: 1;
   letter-spacing: 0.1em;
+  text-align: center;
 }
 
 .chatroom-call-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: none;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
@@ -497,6 +504,7 @@
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 500;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .chatroom-call-btn:hover {
@@ -539,6 +547,48 @@
 .chatroom-call-btn svg {
   width: 22px;
   height: 22px;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 600px) {
+  .chatroom-call-overlay.audio {
+    padding: 1.5rem 1rem;
+  }
+  
+  .chatroom-call-overlay.audio .chatroom-call-timer {
+    font-size: 2.5rem;
+  }
+  
+  .chatroom-call-overlay.audio .chatroom-call-controls {
+    max-width: 100%;
+    gap: 1rem;
+    padding: 0.7rem 1.2rem;
+  }
+  
+  .chatroom-call-btn {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .chatroom-call-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-height: 600px) {
+  .chatroom-call-overlay.audio {
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .chatroom-call-overlay.audio .chatroom-call-timer {
+    font-size: 2rem;
+  }
+  
+  .chatroom-audio-visual {
+    gap: 1rem;
+  }
 }
 
 /* ── Messages area ──────────────────────────── */
