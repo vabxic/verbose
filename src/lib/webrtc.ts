@@ -221,7 +221,12 @@ export class WebRTCService {
 
     const payload = signal.payload as { sdp: string; type: RTCSdpType; callType: CallType };
     const stream = await this.getLocalStream(payload.callType);
+
+    // Save buffered ICE candidates that arrived while waiting for user to accept
+    const savedCandidates = [...this.pendingCandidates];
     const pc = this.createPeerConnection();
+    // Restore the saved candidates (createPeerConnection resets the array)
+    this.pendingCandidates = savedCandidates;
 
     this.callbacks.onLocalStream(stream);
 

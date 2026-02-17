@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../providers/auth';
 import { Logo } from './Logo';
 import ProfileAvatar from './ProfileAvatar';
@@ -7,6 +7,19 @@ import ChatRoom from './ChatRoom';
 import BackgroundHome from './background_home';
 import { createRoom, joinRoomByCode, sendMessage } from '../lib/rooms';
 import type { Room } from '../lib/rooms';
+import {
+  getSavedRooms,
+  unsaveRoom,
+  getIncomingFriendRequests,
+  getOutgoingFriendRequests,
+  getFriends,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  deleteFriendRequest,
+  getPendingRequestCount,
+  subscribeToFriendRequests,
+} from '../lib/social';
+import type { SavedRoom, FriendRequest } from '../lib/social';
 import './HomePage.css';
 
 type View = 'home' | 'chat';
@@ -37,6 +50,20 @@ export const HomePage: React.FC = () => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const prevUserIdRef = useRef(user?.id);
   const urlJoinAttemptedRef = useRef(false);
+
+  // Saved rooms state
+  const [savedRooms, setSavedRooms] = useState<(SavedRoom & { room: Room })[]>([]);
+  const [, setLoadingSavedRooms] = useState(false);
+
+  // Find People / friend requests state
+  const [showFindPeople, setShowFindPeople] = useState(false);
+  const [findPeopleTab, setFindPeopleTab] = useState<'incoming' | 'outgoing' | 'friends'>('incoming');
+  const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
+  const [friends, setFriends] = useState<FriendRequest[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [processingReqId, setProcessingReqId] = useState<string | null>(null);
 
   const displayName = isAnonymous
     ? 'Guest'
@@ -102,6 +129,129 @@ export const HomePage: React.FC = () => {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // ── Load saved rooms ─────────────────────────
+  const loadSavedRooms = useCallback(async () => {
+    if (!user?.id || isAnonymous) return;
+    setLoadingSavedRooms(true);
+    try {
+      const rooms = await getSavedRooms(user.id);
+      setSavedRooms(rooms);
+    } catch (err) {
+      console.error('[HomePage] Failed to load saved rooms:', err);
+    } finally {
+      setLoadingSavedRooms(false);
+    }
+  }, [user?.id, isAnonymous]);
+
+  useEffect(() => {
+    loadSavedRooms();
+  }, [loadSavedRooms]);
+
+  // Refresh saved rooms when returning from chat
+  useEffect(() => {
+    if (activeView === 'home') {
+      loadSavedRooms();
+    }
+  }, [activeView, loadSavedRooms]);
+
+  // ── Load friend requests & subscribe ─────────
+  const loadFriendData = useCallback(async () => {
+    if (!user?.id || isAnonymous) return;
+    setLoadingFriends(true);
+    try {
+      const [incoming, outgoing, friendsList, count] = await Promise.all([
+        getIncomingFriendRequests(user.id),
+        getOutgoingFriendRequests(user.id),
+        getFriends(user.id),
+        getPendingRequestCount(user.id),
+      ]);
+      setIncomingRequests(incoming);
+      setOutgoingRequests(outgoing);
+      setFriends(friendsList);
+      setPendingCount(count);
+    } catch (err) {
+      console.error('[HomePage] Failed to load friend data:', err);
+    } finally {
+      setLoadingFriends(false);
+    }
+  }, [user?.id, isAnonymous]);
+
+  useEffect(() => {
+    loadFriendData();
+  }, [loadFriendData]);
+
+  // Subscribe to realtime friend request changes
+  useEffect(() => {
+    if (!user?.id || isAnonymous) return;
+    const unsub = subscribeToFriendRequests(user.id, () => {
+      loadFriendData();
+    });
+    return unsub;
+  }, [user?.id, isAnonymous, loadFriendData]);
+
+  // ── Friend request handlers ──────────────────
+  const handleAcceptRequest = async (reqId: string) => {
+    setProcessingReqId(reqId);
+    try {
+      await acceptFriendRequest(reqId);
+      await loadFriendData();
+    } catch (err) {
+      console.error('[HomePage] Failed to accept request:', err);
+    } finally {
+      setProcessingReqId(null);
+    }
+  };
+
+  const handleRejectRequest = async (reqId: string) => {
+    setProcessingReqId(reqId);
+    try {
+      await rejectFriendRequest(reqId);
+      await loadFriendData();
+    } catch (err) {
+      console.error('[HomePage] Failed to reject request:', err);
+    } finally {
+      setProcessingReqId(null);
+    }
+  };
+
+  const handleCancelRequest = async (reqId: string) => {
+    setProcessingReqId(reqId);
+    try {
+      await deleteFriendRequest(reqId);
+      await loadFriendData();
+    } catch (err) {
+      console.error('[HomePage] Failed to cancel request:', err);
+    } finally {
+      setProcessingReqId(null);
+    }
+  };
+
+  const handleRemoveSavedRoom = async (roomId: string) => {
+    if (!user?.id) return;
+    try {
+      await unsaveRoom(user.id, roomId);
+      setSavedRooms((prev) => prev.filter((sr) => sr.room_id !== roomId));
+    } catch (err) {
+      console.error('[HomePage] Failed to remove saved room:', err);
+    }
+  };
+
+  const handleJoinSavedRoom = async (room: Room) => {
+    if (!user?.id || isJoining) return;
+    setIsJoining(true);
+    setRoomError('');
+    try {
+      const { room: joinedRoom } = await joinRoomByCode(room.code, user.id, displayName);
+      await sendMessage(joinedRoom.id, user.id, displayName, `${displayName} joined the room`, 'system');
+      setActiveRoom(joinedRoom);
+      setActiveView('chat');
+    } catch (err: unknown) {
+      setRoomError(err instanceof Error ? err.message : 'Room is no longer active');
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   // ── Create a new room ────────────────────────
   const handleCreateRoom = async () => {
@@ -230,13 +380,16 @@ export const HomePage: React.FC = () => {
             </svg>
           </button>
           {/* Find People icon */}
-          <button className="home-header-icon-btn" aria-label="Find People" title="Find People">
+          <button className="home-header-icon-btn home-find-people-header-btn" aria-label="Find People" title="Find People" onClick={() => { setShowFindPeople(true); loadFriendData(); }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
+            {pendingCount > 0 && (
+              <span className="home-notification-badge">{pendingCount}</span>
+            )}
           </button>
           <ProfileAvatar />
         </div>
@@ -303,7 +456,215 @@ export const HomePage: React.FC = () => {
 
           {/* (Voice & Video call cards removed) */}
         </div>
+
+        {/* ── Saved Rooms Section ── */}
+        {!isAnonymous && savedRooms.length > 0 && (
+          <div className="home-saved-rooms">
+            <h2 className="home-saved-rooms-title">
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+              Saved Rooms
+            </h2>
+            <div className="home-saved-rooms-grid">
+              {savedRooms.map((sr) => (
+                <div key={sr.id} className="home-saved-room-card">
+                  <div className="home-saved-room-info" onClick={() => handleJoinSavedRoom(sr.room)}>
+                    <h4 className="home-saved-room-name">{sr.room?.name || `Room ${sr.room?.code}`}</h4>
+                    <span className="home-saved-room-code">{sr.room?.code}</span>
+                    <span className={`home-saved-room-status ${sr.room?.is_active ? 'active' : 'inactive'}`}>
+                      {sr.room?.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <button
+                    className="home-saved-room-remove"
+                    onClick={(e) => { e.stopPropagation(); handleRemoveSavedRoom(sr.room_id); }}
+                    title="Remove saved room"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* ── Find People Panel ── */}
+      {showFindPeople && (
+        <div className="home-find-people-overlay" onClick={() => setShowFindPeople(false)}>
+          <div className="home-find-people-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="home-find-people-header">
+              <h2>Find People</h2>
+              <button className="home-find-people-close" onClick={() => setShowFindPeople(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="home-find-people-tabs">
+              <button
+                className={`home-find-people-tab${findPeopleTab === 'incoming' ? ' active' : ''}`}
+                onClick={() => setFindPeopleTab('incoming')}
+              >
+                Incoming
+                {pendingCount > 0 && <span className="home-find-people-tab-badge">{pendingCount}</span>}
+              </button>
+              <button
+                className={`home-find-people-tab${findPeopleTab === 'outgoing' ? ' active' : ''}`}
+                onClick={() => setFindPeopleTab('outgoing')}
+              >
+                Sent
+              </button>
+              <button
+                className={`home-find-people-tab${findPeopleTab === 'friends' ? ' active' : ''}`}
+                onClick={() => setFindPeopleTab('friends')}
+              >
+                Friends
+              </button>
+            </div>
+
+            <div className="home-find-people-content">
+              {loadingFriends && (
+                <div className="home-find-people-loading">Loading…</div>
+              )}
+
+              {/* Incoming Requests */}
+              {findPeopleTab === 'incoming' && !loadingFriends && (
+                <>
+                  {incomingRequests.length === 0 ? (
+                    <div className="home-find-people-empty">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="32" height="32">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="8.5" cy="7" r="4" />
+                        <line x1="20" y1="8" x2="20" y2="14" />
+                        <line x1="23" y1="11" x2="17" y2="11" />
+                      </svg>
+                      <p>No pending friend requests</p>
+                    </div>
+                  ) : (
+                    incomingRequests.map((req) => (
+                      <div key={req.id} className="home-find-people-request">
+                        <div className="home-find-people-req-avatar">
+                          {(req.sender_name || 'U')[0].toUpperCase()}
+                        </div>
+                        <div className="home-find-people-req-info">
+                          <span className="home-find-people-req-name">{req.sender_name || 'User'}</span>
+                          <span className="home-find-people-req-time">
+                            {new Date(req.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="home-find-people-req-actions">
+                          <button
+                            className="home-find-people-accept-btn"
+                            onClick={() => handleAcceptRequest(req.id)}
+                            disabled={processingReqId === req.id}
+                          >
+                            {processingReqId === req.id ? '…' : 'Accept'}
+                          </button>
+                          <button
+                            className="home-find-people-reject-btn"
+                            onClick={() => handleRejectRequest(req.id)}
+                            disabled={processingReqId === req.id}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {/* Outgoing Requests */}
+              {findPeopleTab === 'outgoing' && !loadingFriends && (
+                <>
+                  {outgoingRequests.length === 0 ? (
+                    <div className="home-find-people-empty">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="32" height="32">
+                        <path d="M22 2L11 13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </svg>
+                      <p>No pending sent requests</p>
+                    </div>
+                  ) : (
+                    outgoingRequests.map((req) => (
+                      <div key={req.id} className="home-find-people-request">
+                        <div className="home-find-people-req-avatar">
+                          {(req.receiver_name || 'U')[0].toUpperCase()}
+                        </div>
+                        <div className="home-find-people-req-info">
+                          <span className="home-find-people-req-name">{req.receiver_name || 'User'}</span>
+                          <span className="home-find-people-req-time">Pending</span>
+                        </div>
+                        <div className="home-find-people-req-actions">
+                          <button
+                            className="home-find-people-cancel-btn"
+                            onClick={() => handleCancelRequest(req.id)}
+                            disabled={processingReqId === req.id}
+                          >
+                            {processingReqId === req.id ? '…' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {/* Friends List */}
+              {findPeopleTab === 'friends' && !loadingFriends && (
+                <>
+                  {friends.length === 0 ? (
+                    <div className="home-find-people-empty">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="32" height="32">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                      <p>No friends yet. Send requests from a chat room!</p>
+                    </div>
+                  ) : (
+                    friends.map((f) => {
+                      const friendName = f.sender_id === user?.id ? f.receiver_name : f.sender_name;
+                      return (
+                        <div key={f.id} className="home-find-people-request home-find-people-friend">
+                          <div className="home-find-people-req-avatar friend">
+                            {(friendName || 'U')[0].toUpperCase()}
+                          </div>
+                          <div className="home-find-people-req-info">
+                            <span className="home-find-people-req-name">{friendName || 'User'}</span>
+                            <span className="home-find-people-req-time">Friends</span>
+                          </div>
+                          <div className="home-find-people-req-actions">
+                            <button
+                              className="home-find-people-remove-btn"
+                              onClick={() => handleCancelRequest(f.id)}
+                              disabled={processingReqId === f.id}
+                              title="Remove friend"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </BackgroundHome>
   );

@@ -550,3 +550,453 @@
 .home-error-banner button:hover {
   opacity: 1;
 }
+
+/* ── Notification Badge ── */
+.home-find-people-header-btn {
+  position: relative;
+}
+
+.home-notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ff4757;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* ── Saved Rooms Section ── */
+.home-saved-rooms {
+  margin-top: 2rem;
+}
+
+.home-saved-rooms-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+  color: #fff;
+  margin: 0 0 1rem;
+}
+
+.home-saved-rooms-title svg {
+  color: rgba(255, 200, 60, 0.8);
+}
+
+.home-saved-rooms-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.home-saved-room-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s ease;
+}
+
+.home-saved-room-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.home-saved-room-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  cursor: pointer;
+}
+
+.home-saved-room-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.home-saved-room-code {
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.08em;
+}
+
+.home-saved-room-status {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+}
+
+.home-saved-room-status.active {
+  color: rgba(80, 200, 120, 0.9);
+  background: rgba(80, 200, 120, 0.1);
+}
+
+.home-saved-room-status.inactive {
+  color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.home-saved-room-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.home-saved-room-remove:hover {
+  background: rgba(255, 80, 80, 0.12);
+  color: #ff6b6b;
+}
+
+/* ── Find People Panel (Overlay) ── */
+.home-find-people-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  animation: findPeopleFadeIn 0.2s ease;
+}
+
+@keyframes findPeopleFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.home-find-people-panel {
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  background: rgba(12, 12, 22, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  animation: findPeopleSlideIn 0.3s ease;
+  backdrop-filter: blur(20px);
+}
+
+@keyframes findPeopleSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.home-find-people-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.home-find-people-header h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.home-find-people-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-find-people-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ── Tabs ── */
+.home-find-people-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.home-find-people-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-find-people-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.home-find-people-tab.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.home-find-people-tab-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ff4757;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Content ── */
+.home-find-people-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.home-find-people-loading {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+.home-find-people-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.home-find-people-empty p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ── Request Item ── */
+.home-find-people-request {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.home-find-people-request:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.home-find-people-req-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.home-find-people-req-avatar.friend {
+  background: rgba(80, 200, 120, 0.12);
+  color: rgba(80, 200, 120, 0.9);
+}
+
+.home-find-people-req-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.home-find-people-req-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-find-people-req-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.home-find-people-req-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.home-find-people-accept-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(80, 200, 120, 0.15);
+  color: rgba(80, 200, 120, 0.9);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-find-people-accept-btn:hover:not(:disabled) {
+  background: rgba(80, 200, 120, 0.25);
+}
+
+.home-find-people-accept-btn:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+.home-find-people-reject-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 80, 80, 0.1);
+  color: rgba(255, 80, 80, 0.8);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-find-people-reject-btn:hover:not(:disabled) {
+  background: rgba(255, 80, 80, 0.2);
+}
+
+.home-find-people-reject-btn:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+.home-find-people-cancel-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-find-people-cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.home-find-people-cancel-btn:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+.home-find-people-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-find-people-remove-btn:hover {
+  background: rgba(255, 80, 80, 0.12);
+  color: #ff6b6b;
+}
+
+.home-find-people-remove-btn:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+/* ── Responsive: Find People ── */
+@media (max-width: 480px) {
+  .home-find-people-panel {
+    max-width: 100%;
+  }
+
+  .home-find-people-tabs {
+    padding: 0.5rem 1rem;
+  }
+
+  .home-find-people-content {
+    padding: 0.75rem 1rem;
+  }
+}

@@ -12,6 +12,7 @@ import {
 import type { Room, RoomMessage, RoomParticipant } from '../lib/rooms';
 import { WebRTCService } from '../lib/webrtc';
 import type { CallType } from '../lib/webrtc';
+import { saveRoom, unsaveRoom, isRoomSaved, sendFriendRequest } from '../lib/social';
 import './ChatRoom.css';
 
 interface ChatRoomProps {
@@ -38,6 +39,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [showLinkCopied, setShowLinkCopied] = useState(false);
   const [incomingCall, setIncomingCall] = useState<{ type: CallType } | null>(null);
   const [lineBusyError, setLineBusyError] = useState(false);
+
+  // Save room state
+  const [roomSaved, setRoomSaved] = useState(false);
+  const [savingRoom, setSavingRoom] = useState(false);
+
+  // Friend request state
+  const [showFriendReqModal, setShowFriendReqModal] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState<RoomParticipant | null>(null);
+  const [sendingFriendReq, setSendingFriendReq] = useState(false);
+  const [friendReqStatus, setFriendReqStatus] = useState<string>('');
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -347,6 +358,57 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     setTimeout(() => setShowLinkCopied(false), 2000);
   };
 
+  // ── Check if room is saved on mount ────────
+  useEffect(() => {
+    if (!user?.id || !room.id) return;
+    isRoomSaved(user.id, room.id).then(setRoomSaved).catch(() => {});
+  }, [user?.id, room.id]);
+
+  // ── Save / Unsave room ─────────────────────
+  const handleToggleSaveRoom = async () => {
+    if (!user?.id || savingRoom) return;
+    setSavingRoom(true);
+    try {
+      if (roomSaved) {
+        await unsaveRoom(user.id, room.id);
+        setRoomSaved(false);
+      } else {
+        await saveRoom(user.id, room.id);
+        setRoomSaved(true);
+      }
+    } catch (err) {
+      console.error('[ChatRoom] Failed to toggle save room:', err);
+    } finally {
+      setSavingRoom(false);
+    }
+  };
+
+  // ── Send friend request ────────────────────
+  const handleSendFriendRequest = async (participant: RoomParticipant) => {
+    if (!user?.id || sendingFriendReq) return;
+    if (participant.user_id === user.id) return;
+    setSendingFriendReq(true);
+    setFriendReqStatus('');
+    try {
+      await sendFriendRequest(
+        user.id,
+        displayName,
+        participant.user_id,
+        participant.display_name || 'User',
+      );
+      setFriendReqStatus('sent');
+      setTimeout(() => {
+        setShowFriendReqModal(false);
+        setFriendReqStatus('');
+        setSelectedParticipant(null);
+      }, 1500);
+    } catch (err) {
+      setFriendReqStatus(err instanceof Error ? err.message : 'Failed to send request');
+    } finally {
+      setSendingFriendReq(false);
+    }
+  };
+
   // ── Incoming call controls ────────────────
   const acceptCall = async () => {
     if (!incomingCall) return;
@@ -354,24 +416,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     setInCall(true);
     setIncomingCall(null);
     try {
-      // ensure we have a local stream ready for the call
-      await startLocalStream();
+      // WebRTCService.acceptCall handles media acquisition and fires onLocalStream
       await webrtcRef.current?.acceptCall();
     } catch (err) {
       console.error('[ChatRoom] Failed to accept call:', err);
       setInCall(false);
-    }
-  };
-
-  // Acquire local media and attach to local preview + store in ref
-  const startLocalStream = async () => {
-    try {
-      if (localStreamRef.current) return;
-      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = s;
-      if (localVideoRef.current) localVideoRef.current.srcObject = s;
-    } catch (err) {
-      console.warn('[ChatRoom] Could not acquire local media:', err);
     }
   };
 
@@ -467,6 +516,33 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         </div>
 
         <div className="chatroom-header-actions">
+          {/* Save room button */}
+          <button
+            className={`chatroom-save-btn${roomSaved ? ' saved' : ''}`}
+            onClick={handleToggleSaveRoom}
+            disabled={savingRoom}
+            title={roomSaved ? 'Unsave room' : 'Save room'}
+          >
+            <svg viewBox="0 0 24 24" fill={roomSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            {roomSaved && <span className="chatroom-save-label">Saved</span>}
+          </button>
+
+          {/* Add friend button */}
+          <button
+            className="chatroom-add-friend-btn"
+            onClick={() => setShowFriendReqModal(true)}
+            title="Send friend request"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="8.5" cy="7" r="4" />
+              <line x1="20" y1="8" x2="20" y2="14" />
+              <line x1="23" y1="11" x2="17" y2="11" />
+            </svg>
+          </button>
+
           {/* Room code badge */}
           <button className="chatroom-code-badge" onClick={copyCode} title="Copy room code">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
@@ -543,13 +619,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                   <line x1="12" y1="19" x2="12" y2="23" />
                   <line x1="8" y1="23" x2="16" y2="23" />
                 </svg>
-              </div>
-              <div className="chatroom-audio-waves">
-                <div className="chatroom-audio-wave"></div>
-                <div className="chatroom-audio-wave"></div>
-                <div className="chatroom-audio-wave"></div>
-                <div className="chatroom-audio-wave"></div>
-                <div className="chatroom-audio-wave"></div>
               </div>
               {/* Hidden audio element for audio-only calls */}
               <audio
@@ -650,6 +719,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                 <svg className="chatroom-incoming-reject-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
+                Reject
               </button>
             </div>
           </div>
@@ -667,6 +737,61 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             </svg>
             <h3>Line Busy</h3>
             <p>The other person is calling. Please accept or reject their call first.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Friend Request Modal ──────── */}
+      {showFriendReqModal && (
+        <div className="chatroom-friend-modal-overlay" onClick={() => { setShowFriendReqModal(false); setFriendReqStatus(''); setSelectedParticipant(null); }}>
+          <div className="chatroom-friend-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="chatroom-friend-modal-title">Send Friend Request</h3>
+            <p className="chatroom-friend-modal-subtitle">Choose a participant to add as a friend</p>
+
+            <div className="chatroom-friend-modal-list">
+              {participants
+                .filter((p) => p.user_id !== user?.id)
+                .map((p) => (
+                  <button
+                    key={p.id}
+                    className={`chatroom-friend-modal-item${selectedParticipant?.id === p.id ? ' selected' : ''}`}
+                    onClick={() => setSelectedParticipant(p)}
+                  >
+                    <div className="chatroom-friend-modal-avatar">
+                      {(p.display_name || 'U')[0].toUpperCase()}
+                    </div>
+                    <span className="chatroom-friend-modal-name">{p.display_name || 'User'}</span>
+                    {selectedParticipant?.id === p.id && (
+                      <svg className="chatroom-friend-modal-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              {participants.filter((p) => p.user_id !== user?.id).length === 0 && (
+                <p className="chatroom-friend-modal-empty">No other participants in this room yet.</p>
+              )}
+            </div>
+
+            {friendReqStatus === 'sent' && (
+              <p className="chatroom-friend-modal-success">Friend request sent!</p>
+            )}
+            {friendReqStatus && friendReqStatus !== 'sent' && (
+              <p className="chatroom-friend-modal-error">{friendReqStatus}</p>
+            )}
+
+            <div className="chatroom-friend-modal-actions">
+              <button className="chatroom-friend-modal-cancel" onClick={() => { setShowFriendReqModal(false); setFriendReqStatus(''); setSelectedParticipant(null); }}>
+                Cancel
+              </button>
+              <button
+                className="chatroom-friend-modal-send"
+                onClick={() => selectedParticipant && handleSendFriendRequest(selectedParticipant)}
+                disabled={!selectedParticipant || sendingFriendReq || friendReqStatus === 'sent'}
+              >
+                {sendingFriendReq ? 'Sending…' : friendReqStatus === 'sent' ? 'Sent!' : 'Send Request'}
+              </button>
+            </div>
           </div>
         </div>
       )}
