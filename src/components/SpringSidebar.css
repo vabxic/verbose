@@ -176,6 +176,25 @@
   margin: 0 0 1.5rem;
 }
 
+/* Hero section styling */
+.landing-section:first-child .landing-section-content h2 {
+  font-size: clamp(1.8rem, 4.5vw, 3rem);
+  font-weight: 300;
+  color: #ffffff;
+  margin: 0 0 1rem;
+  line-height: 1.1;
+}
+
+.landing-section:first-child .landing-section-content p {
+  font-size: clamp(0.85rem, 1.8vw, 1.1rem);
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+}
+  
+
+
 .landing-section-icon {
   width: 72px;
   height: 72px;

@@ -136,6 +136,20 @@ img, svg, video {
   font-weight: 600;
 }
 
+/* Section title styling for landing sections */
+.section-title {
+  font-family: 'Poppins', sans-serif;
+}
+
+.section-char {
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.section-encrypted {
+  color: rgba(255, 255, 255, 0.45);
+  filter: blur(0.6px);
+}
+
 /* Translucent navbar/header styles (covers common header selectors) */
 header,
 .header,

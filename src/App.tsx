@@ -30,7 +30,7 @@ const StyledButton = styled.button`
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif,
     Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
-  font-size: 100%;
+  font-size: 110%;
   font-weight: 900;
   line-height: 1.5;
   margin: 0;
@@ -42,7 +42,7 @@ const StyledButton = styled.button`
   border-radius: 99rem;
   border-width: 2px;
   overflow: hidden;
-  padding: 0.8rem 3rem;
+  padding: 0.55rem 2rem;
   position: relative;
   transition: transform 0.2s ease;
 
@@ -385,11 +385,37 @@ function App() {
         {/* ── Hero ── */}
         <section className="landing-section">
           <FadeSection className="landing-section-content">
-              <div className="flex items-center justify-center mt-6">
-                <StyledButton onClick={handleGetStarted}>
-                  <span>Get Started</span>
-                </StyledButton>
-              </div>
+            <h2>
+              <DecryptedText
+                text="Talk more, with verbose"
+                speed={50}
+                maxIterations={12}
+                sequential
+                revealDirection="start"
+                animateOn="view"
+                parentClassName="section-title"
+                className="section-char"
+                encryptedClassName="section-encrypted"
+              />
+            </h2>
+            <p>
+              <DecryptedText
+                text="The next-gen communication platform — sleek, fast, and private."
+                speed={50}
+                maxIterations={12}
+                sequential
+                revealDirection="start"
+                animateOn="view"
+                parentClassName="section-title"
+                className="section-char"
+                encryptedClassName="section-encrypted"
+              />
+            </p>
+            <div className="flex items-center justify-center mt-6">
+              <StyledButton onClick={handleGetStarted}>
+                <span>Get Started</span>
+              </StyledButton>
+            </div>
           </FadeSection>
         </section>
 
