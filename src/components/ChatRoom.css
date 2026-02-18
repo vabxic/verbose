@@ -304,9 +304,7 @@
   position: relative;
 }
 
-.chatroom-more-trigger {
-  /* inherits from .chatroom-hdr-btn */
-}
+/* .chatroom-more-trigger inherits from .chatroom-hdr-btn */
 
 .chatroom-more-popover {
   position: absolute;
@@ -396,7 +394,172 @@
 
 /* Action buttons (legacy – now uses .chatroom-hdr-btn) */
 
-/* ── Call overlay ───────────────────────────── */
+/* ── Audio call bar (compact, top of chat) ─────────────────── */
+.chatroom-audio-call-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 1rem;
+  background: rgba(8, 8, 16, 0.96);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px);
+  flex-shrink: 0;
+  z-index: 20;
+  gap: 0.75rem;
+  min-height: 52px;
+}
+
+.chatroom-audio-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.chatroom-audio-bar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(80, 200, 120, 0.15);
+  border: 1px solid rgba(80, 200, 120, 0.3);
+  flex-shrink: 0;
+  animation: audioPulse 2s ease-in-out infinite;
+}
+
+.chatroom-audio-bar-icon svg {
+  width: 16px;
+  height: 16px;
+  color: rgba(80, 200, 120, 0.9);
+}
+
+@keyframes audioPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(80, 200, 120, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(80, 200, 120, 0); }
+}
+
+.chatroom-audio-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.chatroom-audio-bar-label {
+  font-size: 0.73rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1;
+}
+
+.chatroom-audio-bar-timer {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.chatroom-audio-bar-status {
+  font-size: 0.72rem;
+  color: rgba(255, 200, 80, 0.85);
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 200, 80, 0.1);
+  border: 1px solid rgba(255, 200, 80, 0.2);
+  white-space: nowrap;
+}
+
+.chatroom-audio-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.chatroom-audio-bar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.chatroom-audio-bar-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.chatroom-audio-bar-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.chatroom-audio-bar-btn.off {
+  background: rgba(255, 80, 80, 0.15);
+  color: rgba(255, 120, 120, 0.9);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+}
+
+.chatroom-audio-bar-btn.off:hover {
+  background: rgba(255, 80, 80, 0.25);
+}
+
+.chatroom-audio-bar-btn.hangup {
+  background: linear-gradient(135deg, rgba(255, 70, 70, 0.9), rgba(220, 30, 30, 0.85));
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(255, 70, 70, 0.3);
+}
+
+.chatroom-audio-bar-btn.hangup:hover {
+  background: linear-gradient(135deg, rgba(255, 40, 40, 1), rgba(200, 20, 20, 1));
+  box-shadow: 0 4px 18px rgba(255, 70, 70, 0.45);
+  transform: translateY(-2px);
+}
+
+/* ── Video call overlay (full page) ─────────────────────────── */
+.chatroom-video-call-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.chatroom-video-corner-hint {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Legacy call overlay (kept for backward compat, hidden) ── */
 .chatroom-call-overlay {
   display: flex;
   flex-direction: column;
@@ -416,18 +579,7 @@
 }
 
 .chatroom-call-overlay.audio {
-  position: relative;
-  width: 100%;
-  height: auto;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
-  background: rgba(8, 8, 12, 0.92);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(24px);
-  flex-shrink: 0;
+  display: none;
 }
 
 .chatroom-call-videos {
@@ -448,7 +600,7 @@
 }
 
 .chatroom-local-video {
-  position: absolute;
+  position: fixed;
   width: 160px;
   height: auto;
   max-height: 200px;
@@ -458,48 +610,38 @@
   background: #1a1a2e;
   border: 2px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
-  z-index: 3;
+  z-index: 110;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: scaleX(-1);
   cursor: pointer;
 }
 
-/* Local video corner positions */
+/* Local video corner positions — fixed to viewport */
 .chatroom-local-video.corner-bottom-right {
   bottom: 90px;
   right: 16px;
+  top: auto;
+  left: auto;
 }
 
 .chatroom-local-video.corner-bottom-left {
   bottom: 90px;
   left: 16px;
+  top: auto;
+  right: auto;
 }
 
 .chatroom-local-video.corner-top-right {
-  top: 60px;
+  top: 16px;
   right: 16px;
+  bottom: auto;
+  left: auto;
 }
 
 .chatroom-local-video.corner-top-left {
-  top: 60px;
+  top: 16px;
   left: 16px;
-}
-
-.chatroom-call-overlay.audio .chatroom-call-videos {
-  display: none;
-}
-
-/* Audio call visual – compact bar style */
-.chatroom-audio-visual {
-  display: none; /* Hide avatar in compact audio bar */
-}
-
-.chatroom-audio-avatar {
-  display: none;
-}
-
-.chatroom-audio-waves {
-  display: none;
+  bottom: auto;
+  right: auto;
 }
 
 /* Call status */
@@ -554,61 +696,6 @@
   backdrop-filter: blur(12px);
 
   z-index: 10;
-}
-
-.chatroom-call-overlay.audio .chatroom-call-status {
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: none;
-  margin: 0;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.72rem;
-  border-radius: 10px;
-  order: 1;
-}
-
-.chatroom-call-overlay.audio .chatroom-call-timer {
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: none;
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  background: transparent;
-  border: none;
-  padding: 0;
-  order: 0;
-  letter-spacing: 0.04em;
-}
-
-.chatroom-call-overlay.audio .chatroom-call-controls {
-  position: relative;
-  bottom: auto;
-  left: auto;
-  transform: none;
-  padding: 0;
-  background: transparent;
-  backdrop-filter: none;
-  gap: 0.5rem;
-  order: 2;
-  margin-left: auto;
-}
-
-.chatroom-call-overlay.audio .chatroom-call-btn {
-  width: 36px;
-  height: 36px;
-}
-
-.chatroom-call-overlay.audio .chatroom-call-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.chatroom-call-overlay.audio .chatroom-call-btn.hangup {
-  width: 34px;
-  height: 34px;
 }
 
 /* Mobile safe-area fix */
@@ -679,29 +766,6 @@
 
 /* Responsive design for smaller screens */
 @media (max-width: 600px) {
-  .chatroom-call-overlay.audio {
-    padding: 0.5rem 0.75rem;
-    gap: 0.6rem;
-  }
-  
-  .chatroom-call-overlay.audio .chatroom-call-timer {
-    font-size: 0.82rem;
-  }
-  
-  .chatroom-call-overlay.audio .chatroom-call-controls {
-    gap: 0.4rem;
-  }
-  
-  .chatroom-call-overlay.audio .chatroom-call-btn {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .chatroom-call-overlay.audio .chatroom-call-btn svg {
-    width: 14px;
-    height: 14px;
-  }
-  
   .chatroom-call-btn {
     width: 48px;
     height: 48px;
@@ -713,11 +777,6 @@
   }
 }
 
-@media (max-height: 600px) {
-  .chatroom-call-overlay.audio {
-    padding: 0.4rem 0.75rem;
-  }
-}
 
 /* ── Messages area ──────────────────────────── */
 .chatroom-messages {

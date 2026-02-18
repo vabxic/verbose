@@ -271,7 +271,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             remoteAudioRef.current.play().catch(() => {});
           }
         }
-      }, 50);
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [inCall, callType]);
@@ -703,48 +703,38 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         </div>
       </header>
 
-      {/* ── Video call overlay ─────────── */}
-      {inCall && (
-        <div className={`chatroom-call-overlay ${callType}`}>
-          {callType === 'video' ? (
-            <div className="chatroom-call-videos">
-              <video
-                ref={remoteVideoRef}
-                className="chatroom-remote-video"
-                autoPlay
-                playsInline
-              />
-              <video
-                ref={localVideoRef}
-                className={`chatroom-local-video ${localVideoCorner}`}
-                autoPlay
-                playsInline
-                muted
-                onClick={cycleVideoCorner}
-                title="Click to move"
-              />
-            </div>
-          ) : (
-            <>
-              {/* Hidden audio element for audio-only calls */}
-              <audio
-                ref={remoteAudioRef}
-                autoPlay
-                style={{ display: 'none' }}
-              />
-            </>
-          )}
+      {/* ── Audio call bar (top of chat, non-covering) ── */}
+      {inCall && callType === 'audio' && (
+        <div className="chatroom-audio-call-bar">
+          {/* Hidden audio element */}
+          <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
 
-          <div className="chatroom-call-timer">{formatDuration(elapsedSeconds)}</div>
-          <div className="chatroom-call-status">
-            {connectionState === 'connecting' && 'Connecting…'}
-            {connectionState === 'connected' && 'Connected'}
-            {connectionState === 'disconnected' && 'Reconnecting…'}
+          {/* Left: mic icon + timer */}
+          <div className="chatroom-audio-bar-left">
+            <div className="chatroom-audio-bar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            </div>
+            <div className="chatroom-audio-bar-info">
+              <span className="chatroom-audio-bar-label">Voice call</span>
+              <span className="chatroom-audio-bar-timer">{formatDuration(elapsedSeconds)}</span>
+            </div>
+            {connectionState && connectionState !== 'connected' && (
+              <span className="chatroom-audio-bar-status">
+                {connectionState === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
+              </span>
+            )}
           </div>
 
-          <div className="chatroom-call-controls">
+          {/* Right: 3 control icons */}
+          <div className="chatroom-audio-bar-controls">
+            {/* Mute toggle */}
             <button
-              className={`chatroom-call-btn ${!audioEnabled ? 'off' : ''}`}
+              className={`chatroom-audio-bar-btn${!audioEnabled ? ' off' : ''}`}
               onClick={toggleAudio}
               title={audioEnabled ? 'Mute' : 'Unmute'}
             >
@@ -766,32 +756,116 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
               )}
             </button>
 
-            {callType === 'video' && (
-              <button
-                className={`chatroom-call-btn ${!videoEnabled ? 'off' : ''}`}
-                onClick={toggleVideo}
-                title={videoEnabled ? 'Camera off' : 'Camera on'}
-              >
-                {videoEnabled ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="23 7 16 12 23 17 23 7" />
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
-                )}
-              </button>
-            )}
+            {/* Speaker / volume (cosmetic toggle placeholder) */}
+            <button
+              className="chatroom-audio-bar-btn"
+              title="Speaker"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </svg>
+            </button>
 
-            <button className="chatroom-call-btn hangup" onClick={hangUp} title="End call">
-              <svg className="chatroom-incoming-reject-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            {/* End call */}
+            <button
+              className="chatroom-audio-bar-btn hangup"
+              onClick={hangUp}
+              title="End call"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: 'rotate(136deg)' }}>
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Video call overlay (full page) ─────────── */}
+      {inCall && callType === 'video' && (
+        <div className="chatroom-video-call-overlay">
+          <div className="chatroom-call-videos">
+            <video
+              ref={remoteVideoRef}
+              className="chatroom-remote-video"
+              autoPlay
+              playsInline
+            />
+            <video
+              ref={localVideoRef}
+              className={`chatroom-local-video ${localVideoCorner}`}
+              autoPlay
+              playsInline
+              muted
+              onClick={cycleVideoCorner}
+              title="Click to move to next corner"
+            />
+          </div>
+
+          {/* Timer top-center */}
+          <div className="chatroom-call-timer">{formatDuration(elapsedSeconds)}</div>
+
+          {/* Status */}
+          {connectionState && connectionState !== 'connected' && (
+            <div className="chatroom-call-status">
+              {connectionState === 'connecting' && 'Connecting…'}
+              {connectionState === 'disconnected' && 'Reconnecting…'}
+            </div>
+          )}
+
+          {/* Controls bottom-center */}
+          <div className="chatroom-call-controls">
+            <button
+              className={`chatroom-call-btn${!audioEnabled ? ' off' : ''}`}
+              onClick={toggleAudio}
+              title={audioEnabled ? 'Mute' : 'Unmute'}
+            >
+              {audioEnabled ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                  <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .38-.03.75-.08 1.12" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              )}
+            </button>
+
+            <button
+              className={`chatroom-call-btn${!videoEnabled ? ' off' : ''}`}
+              onClick={toggleVideo}
+              title={videoEnabled ? 'Camera off' : 'Camera on'}
+            >
+              {videoEnabled ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              )}
+            </button>
+
+            <button className="chatroom-call-btn hangup" onClick={hangUp} title="End call">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: 'rotate(136deg)' }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Corner hint */}
+          <div className="chatroom-video-corner-hint">Tap your camera to move</div>
         </div>
       )}
 

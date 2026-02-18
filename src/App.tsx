@@ -399,17 +399,7 @@ function App() {
               />
             </h2>
             <p>
-              <DecryptedText
-                text="The next-gen communication platform — sleek, fast, and private."
-                speed={50}
-                maxIterations={12}
-                sequential
-                revealDirection="start"
-                animateOn="view"
-                parentClassName="section-title"
-                className="section-char"
-                encryptedClassName="section-encrypted"
-              />
+              The next-gen communication platform — sleek, fast, and private.
             </p>
             <div className="flex items-center justify-center mt-6">
               <StyledButton onClick={handleGetStarted}>
