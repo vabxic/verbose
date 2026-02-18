@@ -136,8 +136,10 @@
   min-height: 100vh;
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 300px;
+  padding-bottom: 80px;
   scroll-snap-align: start;
   position: relative;
 }
@@ -225,11 +227,28 @@
   }
 
   .landing-section-content h2 {
-    font-size: 1.75rem;
+    font-size: 1.6rem;
   }
 
   .landing-section-content p {
     font-size: 0.95rem;
+  }
+
+  /* Push mobile content lower to avoid background overlap */
+  .landing-section {
+    align-items: flex-start;
+    padding-top: 140px;
+    padding-bottom: 200px;
+  }
+
+  .landing-section-icon {
+    margin-bottom: 1.5rem;
+  }
+
+  .landing-section {
+    padding-top: 250px;
+    padding-bottom: 60px;
+    align-items: flex-start;
   }
 }
 

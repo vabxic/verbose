@@ -9,6 +9,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  display: block;
 }
 
 .threads-container canvas {
@@ -20,4 +21,23 @@
   height: 100%;
   margin: 0;
   padding: 0;
+}
+
+/* Spline viewer styling */
+spline-viewer {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .threads-container {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  spline-viewer {
+    width: 100%;
+    height: 100%;
+  }
 }

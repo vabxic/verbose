@@ -8,6 +8,14 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     strictPort: false,
+    allowedHosts: ["rubber-beings-muze-shades.trycloudflare.com"],
+    proxy: {
+      "/api": {
+        target: "https://rubber-beings-muze-shades.trycloudflare.com",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   build: {
     outDir: "dist",

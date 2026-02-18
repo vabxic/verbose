@@ -352,22 +352,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
   // Memoize the background animation so it doesn't remount on every input change
   const background = useMemo(
     () => (
-      isMobile
-        ? null
-        : (
-            <>
-              <Suspense fallback={null}>
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, pointerEvents: 'none' }}>
-                  <SplashCursor />
-                </div>
-              </Suspense>
-              <Suspense fallback={null}>
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, pointerEvents: 'none' }}>
-                  <Threads />
-                </div>
-              </Suspense>
-            </>
-          )
+      isMobile ? (
+        <Suspense fallback={null}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 8, pointerEvents: 'none' }}>
+            <Threads />
+          </div>
+        </Suspense>
+      ) : (
+        <>
+          <Suspense fallback={null}>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
+              <SplashCursor />
+            </div>
+          </Suspense>
+          <Suspense fallback={null}>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 10, pointerEvents: 'none' }}>
+              <Threads />
+            </div>
+          </Suspense>
+        </>
+      )
     ),
     [isMobile]
   );
