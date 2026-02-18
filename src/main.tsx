@@ -1,5 +1,6 @@
 import "./index.css";
 import { StrictMode, lazy, Suspense } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from "./App.tsx";
@@ -35,5 +36,6 @@ createRoot(document.getElementById("root")!).render(
         </AuthProvider>
       </AppProvider>
     </BrowserRouter>
+    <SpeedInsights />
   </StrictMode>
 );

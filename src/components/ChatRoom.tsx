@@ -48,6 +48,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const [incomingCall, setIncomingCall] = useState<{ type: CallType } | null>(null);
   const [lineBusyError, setLineBusyError] = useState(false);
 
+  // Local video corner position for movable PiP
+  type VideoCorner = 'corner-bottom-right' | 'corner-bottom-left' | 'corner-top-right' | 'corner-top-left';
+  const [localVideoCorner, setLocalVideoCorner] = useState<VideoCorner>('corner-bottom-right');
+
+  const cycleVideoCorner = useCallback(() => {
+    setLocalVideoCorner((prev) => {
+      const order: VideoCorner[] = ['corner-bottom-right', 'corner-bottom-left', 'corner-top-left', 'corner-top-right'];
+      const idx = order.indexOf(prev);
+      return order[(idx + 1) % order.length];
+    });
+  }, []);
+
   // Save room state
   const [roomSaved, setRoomSaved] = useState(false);
   const [savingRoom, setSavingRoom] = useState(false);
@@ -704,29 +716,23 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
               />
               <video
                 ref={localVideoRef}
-                className="chatroom-local-video"
+                className={`chatroom-local-video ${localVideoCorner}`}
                 autoPlay
                 playsInline
                 muted
+                onClick={cycleVideoCorner}
+                title="Click to move"
               />
             </div>
           ) : (
-            <div className="chatroom-audio-visual">
-              <div className="chatroom-audio-avatar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-              </div>
+            <>
               {/* Hidden audio element for audio-only calls */}
               <audio
                 ref={remoteAudioRef}
                 autoPlay
                 style={{ display: 'none' }}
               />
-            </div>
+            </>
           )}
 
           <div className="chatroom-call-timer">{formatDuration(elapsedSeconds)}</div>

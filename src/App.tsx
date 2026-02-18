@@ -328,7 +328,7 @@ function App() {
 
   // ── Landing page with spring scroll + sidebar ──
   return (
-    <div className="w-full min-h-screen relative overflow-hidden" style={{ background: '#000000' }}>
+    <div className="w-full min-h-screen relative" style={{ background: '#000000', overflow: 'hidden' }}>
       {/* Background animation: SplashCursor (fluid dynamics) and Threads (animated lines) */}
       <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none w-full h-screen">
         {!isMobile && (
