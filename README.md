@@ -1,5 +1,5 @@
 # Verbose
-
+https://verbose-eta.vercel.app/
 A modern real-time communication platform built with React, TypeScript, and Supabase. Features a sleek dark glass-morphism UI with animated backgrounds and comprehensive authentication.
 
 ![React](https://img.shields.io/badge/React-19.1.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue) ![Supabase](https://img.shields.io/badge/Supabase-Auth-green) ![Vite](https://img.shields.io/badge/Vite-5.4-purple)
@@ -47,7 +47,7 @@ A modern real-time communication platform built with React, TypeScript, and Supa
 
 ## Screenshots
 
-Below are two example screenshots demonstrating the landing page and the login modal. Save the attached image files into `public/screenshots/` with the filenames shown so they render in this README.
+### Landing & Authentication
 
 ![Landing - Hero](public/screenshots/main.png)
 
@@ -56,6 +56,38 @@ Landing hero with animated stars background and the main CTA.
 ![Login Modal](public/screenshots/image.png)
 
 Sign-in / Guest modal overlay shown over the animated background.
+
+### Theme Options
+
+![Light Theme](public/screenshots/light.png)
+
+Modern light theme with clean, bright interface optimized for daytime usage.
+
+![Dark Theme](public/screenshots/dark.png)
+
+Sleek dark theme with glass-morphism effects for comfortable viewing in low-light environments.
+
+### Background Customization
+
+![Background Selector](public/screenshots/bg.png)
+
+Interactive background selector allowing users to personalize their experience with various animated themes.
+
+### Communication Features
+
+![Video Call](public/screenshots/video%20call.png)
+
+High-quality video calling powered by WebRTC with real-time peer-to-peer connections.
+
+![Audio Call](public/screenshots/audio.png)
+
+Crystal-clear audio calls with minimal latency using WebRTC technology.
+
+### Cloud Storage
+
+![User-Based Cloud Storage](public/screenshots/cloud.png)
+
+Zero platform storage architecture - files upload directly to user's personal Google Drive. Verbose only stores metadata and public share links, ensuring complete data ownership and privacy.
 
 
 ## Tech Stack
