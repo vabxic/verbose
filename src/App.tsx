@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useSpring, animated } from "@react-spring/web";
 import styled from 'styled-components';
-const Threads = lazy(() => import("./components/Threads"));
-const SplashCursor = lazy(() => import("./components/SplashCursor"));
+import { StarsBackground } from "./components/stars";
 import { Logo } from "./components/Logo";
+import CursorTrail from "./components/CursorTrail";
 import DecryptedText from "./components/DecryptedText";
 import SpringSidebar from "./components/SpringSidebar";
 import Loader from "./components/loader";
 import SocialLink from "./components/SocialLink";
+import BuiltForEverythingDemo from "./components/BuiltForEverythingDemo";
+import StayAnonymousDemo from "./components/StayAnonymousDemo";
+import CloudStorageDemo from "./components/CloudStorageDemo";
 const LoginPage = lazy(() => import("./components/LoginPage"));
 const HomePage = lazy(() => import("./components/HomePage"));
 import ProfileAvatar from "./components/ProfileAvatar";
@@ -117,6 +120,7 @@ function FloatingIcon({
   rotationDuration = 12000,
   opacity = 0.07,
   reverse = false,
+  visible = true,
 }: {
   children: React.ReactNode;
   top: string;
@@ -127,6 +131,7 @@ function FloatingIcon({
   rotationDuration?: number;
   opacity?: number;
   reverse?: boolean;
+  visible?: boolean;
 }) {
   const [scrollY, setScrollY] = useState(0);
 
@@ -137,6 +142,8 @@ function FloatingIcon({
     container.addEventListener('scroll', onScroll, { passive: true });
     return () => container.removeEventListener('scroll', onScroll);
   }, []);
+
+  if (!visible) return null;
 
   const spring = useSpring({
     from: { rotate: 0 },
@@ -264,9 +271,8 @@ function SlideInRightSection({ children, className = "" }: { children: React.Rea
 function App() {
   const { user, session, loading, isAnonymous } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
-  const [showSplashCursor, setShowSplashCursor] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [showFloatingIcons, setShowFloatingIcons] = useState(true);
 
   // Handle Get Started button - if session exists, don't show login
   const handleGetStarted = () => {
@@ -289,14 +295,21 @@ function App() {
   }, [user, loading]);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-      setShowSplashCursor(window.innerWidth > 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const footer = document.querySelector('.landing-footer');
+    if (!footer) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const ent = entries[0];
+        // hide icons when footer is visible
+        setShowFloatingIcons(!ent.isIntersecting);
+      },
+      { threshold: 0.1 },
+    );
+    obs.observe(footer);
+    return () => obs.disconnect();
   }, []);
+
+  // (splash cursor removed) no resize handling required here
 
   if (loading) {
     return (
@@ -329,21 +342,11 @@ function App() {
   // ── Landing page with spring scroll + sidebar ──
   return (
     <div className="w-full min-h-screen relative" style={{ background: '#000000', overflow: 'hidden' }}>
-      {/* Background animation: SplashCursor (fluid dynamics) and Threads (animated lines) */}
-      <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none w-full h-screen">
-        {!isMobile && (
-          <div style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5}}>
-            <Suspense fallback={null}>
-              {showSplashCursor && <SplashCursor />}
-            </Suspense>
-          </div>
-        )}
-        <div style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10}}>
-          <Suspense fallback={null}>
-            <Threads />
-          </Suspense>
-        </div>
+      {/* Background: animated stars + optional SplashCursor */}
+      <div className="fixed inset-0 w-full h-screen" style={{ zIndex: 0 }}>
+        <StarsBackground className="w-full h-full" speed={80} starColor="#ffffff" />
       </div>
+      {/* SplashCursor removed — stars background is used instead */}
 
       {/* Floating logo top-left */}
       <div className="fixed top-6 left-8 z-40 pointer-events-none">
@@ -358,27 +361,30 @@ function App() {
       )}
 
       {/* ── Rotating parallax floating icons ── */}
-      <FloatingIcon top="12%" left="8%" size={56} speed={-0.15} rotationDuration={14000} opacity={0.75}>
+      <FloatingIcon visible={showFloatingIcons} top="12%" left="8%" size={56} speed={-0.15} rotationDuration={14000} opacity={0.75}>
         <PhoneIcon />
       </FloatingIcon>
-      <FloatingIcon top="25%" right="12%" size={44} speed={-0.25} rotationDuration={10000} opacity={0.75} reverse>
+      <FloatingIcon visible={showFloatingIcons} top="25%" right="12%" size={44} speed={-0.25} rotationDuration={10000} opacity={0.75} reverse>
         <VideoIcon />
       </FloatingIcon>
-      <FloatingIcon top="48%" left="5%" size={38} speed={-0.2} rotationDuration={18000} opacity={0.75}>
+      <FloatingIcon visible={showFloatingIcons} top="48%" left="5%" size={38} speed={-0.2} rotationDuration={18000} opacity={0.75}>
         <MicIcon />
       </FloatingIcon>
-      <FloatingIcon top="60%" right="7%" size={50} speed={-0.3} rotationDuration={12000} opacity={0.75} reverse>
+      <FloatingIcon visible={showFloatingIcons} top="60%" right="7%" size={50} speed={-0.3} rotationDuration={12000} opacity={0.75} reverse>
         <HeadphonesIcon />
       </FloatingIcon>
-      <FloatingIcon top="78%" left="15%" size={42} speed={-0.18} rotationDuration={16000} opacity={0.75} reverse>
+      <FloatingIcon visible={showFloatingIcons} top="78%" left="15%" size={42} speed={-0.18} rotationDuration={16000} opacity={0.75} reverse>
         <VideoIcon />
       </FloatingIcon>
-      <FloatingIcon top="85%" right="18%" size={36} speed={-0.22} rotationDuration={20000} opacity={0.75}>
+      <FloatingIcon visible={showFloatingIcons} top="85%" right="18%" size={36} speed={-0.22} rotationDuration={20000} opacity={0.75}>
         <PhoneIcon />
       </FloatingIcon>
 
       {/* Spring sidebar on right */}
       <SpringSidebar sections={LANDING_SECTIONS} scrollRef={scrollRef} />
+
+      {/* Cursor trail (visual effect) */}
+      <CursorTrail length={14} size={14} color={'rgba(255,255,255,0.9)'} />
 
       {/* Scrollable sections */}
       <div ref={scrollRef} className="landing-scroll-container">
@@ -410,93 +416,101 @@ function App() {
         </section>
 
         {/* ── Features ── */}
-        <section className="landing-section">
-          <FadeSection className="landing-section-content">
-            <h2>
-              <DecryptedText
-                text="Built for Everything"
-                speed={50}
-                maxIterations={12}
-                sequential
-                revealDirection="start"
-                animateOn="view"
-                parentClassName="section-title"
-                className="section-char"
-                encryptedClassName="section-encrypted"
-              />
-            </h2>
-            <p>
-              Text, voice, and video — all in one place. Crystal-clear calls,
-              instant messaging, and seamless file sharing with end-to-end encryption.
-            </p>
-            <div className="landing-section-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
+        <section className="landing-section" id="features">
+          <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-8">
+
+            {/* LEFT — text */}
+            <div className="text-center lg:text-left">
+              <h2 className="text-4xl font-bold">
+                <DecryptedText
+                  text="Built for Everything"
+                  speed={50}
+                  maxIterations={12}
+                  sequential
+                  revealDirection="start"
+                  animateOn="view"
+                  parentClassName="section-title"
+                  className="section-char"
+                  encryptedClassName="section-encrypted"
+                />
+              </h2>
+              <p className="mt-4 text-white/60">
+                Text, voice, and video — all in one place. Crystal-clear calls,
+                instant messaging, and seamless file sharing with end-to-end encryption.
+              </p>
             </div>
-          </FadeSection>
+
+            {/* RIGHT — animated demo */}
+            <div className="flex justify-center">
+              <BuiltForEverythingDemo />
+            </div>
+
+          </div>
         </section>
 
         {/* ── Anonymous ── */}
-        <section className="landing-section">
-          <FadeSection className="landing-section-content">
-            <h2>
-              <DecryptedText
-                text="Stay Anonymous"
-                speed={50}
-                maxIterations={12}
-                sequential
-                revealDirection="start"
-                animateOn="view"
-                parentClassName="section-title"
-                className="section-char"
-                encryptedClassName="section-encrypted"
-              />
-            </h2>
-            <p>
-              Chat and connect without revealing your identity. Your privacy is our priority.
-              Enjoy complete anonymity while engaging with the Verbose community.
-            </p>
-            <div className="landing-section-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+        <section className="landing-section" id="anonymous">
+          <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-8">
+
+            {/* LEFT — animated demo */}
+            <div className="flex justify-center order-2 lg:order-1">
+              <StayAnonymousDemo />
             </div>
-          </FadeSection>
+
+            {/* RIGHT — text */}
+            <div className="text-center lg:text-left order-1 lg:order-2">
+              <h2 className="text-4xl font-bold">
+                <DecryptedText
+                  text="Stay Anonymous"
+                  speed={50}
+                  maxIterations={12}
+                  sequential
+                  revealDirection="start"
+                  animateOn="view"
+                  parentClassName="section-title"
+                  className="section-char"
+                  encryptedClassName="section-encrypted"
+                />
+              </h2>
+              <p className="mt-4 text-white/60">
+                Chat and connect without revealing your identity. Your privacy is our priority.
+                Enjoy complete anonymity while engaging with the Verbose community.
+              </p>
+            </div>
+
+          </div>
         </section>
 
-        {/* ── Get Started (Cloud Storage) ── */}
-        <section className="landing-section">
-          <FadeSection className="landing-section-content">
-            <h2>
-              <DecryptedText
-                text="User-based Cloud Storage"
-                speed={50}
-                maxIterations={12}
-                sequential
-                revealDirection="start"
-                animateOn="view"
-                parentClassName="section-title"
-                className="section-char"
-                encryptedClassName="section-encrypted"
-              />
-            </h2>
-            <p className="mt-2">
-              Your files, your control — secure, private storage synced across devices.
-            </p>
-            <div className="landing-section-icon">
-              <svg height="64px" width="64px" viewBox="0 0 58.21 58.21" fill="#ffffff" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve">
-                <g>
-                  <g>
-                    <path d="M48.077,25.553c0.021-0.304,0.03-0.604,0.03-0.897c0-8.459-6.882-15.341-15.34-15.341 c-6.084,0-11.598,3.611-14.032,9.174c-0.029,0.042-0.123,0.106-0.161,0.117c-3.776,0.395-7.116,2.797-8.713,6.266 c-0.046,0.088-0.227,0.236-0.316,0.263C3.925,26.369,0,31.231,0,36.96c0,6.692,5.341,11.935,12.159,11.935h34.448 c6.397,0,11.603-5.307,11.603-11.83C58.21,31.164,53.783,26.278,48.077,25.553z M46.607,45.894H12.159 C7.023,45.894,3,41.97,3,36.959c0-4.308,2.956-7.966,7.187-8.895c1.001-0.219,1.964-0.996,2.397-1.935 c1.158-2.515,3.573-4.255,6.302-4.54c1.089-0.113,2.151-0.883,2.585-1.873c1.97-4.497,6.403-7.402,11.297-7.402 c6.805,0,12.34,5.536,12.34,12.341c0,0.378-0.021,0.773-0.064,1.176c-0.102,0.951-0.169,1.579,0.334,2.137 c0.284,0.316,0.699,0.501,1.124,0.501c0.028-0.014,0.108-0.004,0.162-0.01c4.718,0.031,8.547,3.878,8.547,8.603 C55.21,41.85,51.27,45.894,46.607,45.894z" />
-                  </g>
-                </g>
-              </svg>
+        {/* ── Cloud Storage ── */}
+        <section className="landing-section" id="storage">
+          <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-8">
+
+            {/* LEFT — text */}
+            <div className="text-center lg:text-left">
+              <h2 className="text-4xl font-bold">
+                <DecryptedText
+                  text="User-based Cloud Storage"
+                  speed={50}
+                  maxIterations={12}
+                  sequential
+                  revealDirection="start"
+                  animateOn="view"
+                  parentClassName="section-title"
+                  className="section-char"
+                  encryptedClassName="section-encrypted"
+                />
+              </h2>
+              <p className="mt-4 text-white/60">
+                Your files, your control — secure, private storage synced across devices.
+              </p>
             </div>
-          </FadeSection>
+
+            {/* RIGHT — animated demo */}
+            <div className="flex justify-center">
+              <CloudStorageDemo />
+            </div>
+
+          </div>
         </section>
 
         {/* Contact section removed per request */}
@@ -557,10 +571,9 @@ function App() {
 
           <div className="landing-footer-nav">
             <nav className="footer-links">
-              <a href="#">Home</a>
-              <a href="#">Projects</a>
-              <a href="#">About</a>
-              <a href="#">Contact</a>
+              <a href="/">Home</a>
+              <a href="https://github.com/vabxic?tab=repositories">Projects</a>
+             
             </nav>
           </div>
 

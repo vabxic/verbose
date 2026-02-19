@@ -168,3 +168,19 @@ header,
 .header *, header * {
   color: inherit;
 }
+
+/* Custom SVG cursor (fallback to auto) */
+/* Hotspot is placed near the tip: 6 2 */
+:root, body {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0%200%2024%2024'><path fill='%23FFF' stroke='%23000' stroke-width='2' d='M5.5%203.21V20.8c0%20.45.54.67.85.35l4.86-4.86a.5.5%200%200%201%20.35-.15h6.87a.5.5%200%200%200%20.35-.85L6.35%202.85a.5.5%200%200%200-.85.35Z'/></svg>") 6 2, auto;
+}
+
+/* Keep text inputs and contenteditable using native cursors */
+input, textarea, [contenteditable], select {
+  cursor: text;
+}
+
+/* Explicit pointer for interactive controls (optional) */
+.pointer, button, a, [role="button"] {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0%200%2024%2024'><path fill='%23FFF' stroke='%23000' stroke-width='2' d='M5.5%203.21V20.8c0%20.45.54.67.85.35l4.86-4.86a.5.5%200%200%201%20.35-.15h6.87a.5.5%200%200%200%20.35-.85L6.35%202.85a.5.5%200%200%200-.85.35Z'/></svg>") 6 2, auto;
+}

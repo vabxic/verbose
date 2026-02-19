@@ -1,11 +1,11 @@
-import React, { useState, useMemo, Suspense, lazy, useEffect } from 'react';
+import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useAuth } from '../providers/auth';
 import { Logo } from './Logo';
 import './LoginPage.css';
 
-const Threads = lazy(() => import('./Threads'));
-const SplashCursor = lazy(() => import('./SplashCursor'));
+// Threads component lazy import removed — not used in login background
+import { StarsBackground } from './stars';
 
 /* Rotating SVG icon with scroll-based parallax offset */
 function FloatingIcon({
@@ -355,19 +355,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, hideGuestTab }) =>
       isMobile ? (
         <Suspense fallback={null}>
           <div style={{ position: 'fixed', inset: 0, zIndex: 8, pointerEvents: 'none' }}>
-            <Threads />
+            <StarsBackground />
           </div>
         </Suspense>
       ) : (
         <>
           <Suspense fallback={null}>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
-              <SplashCursor />
-            </div>
-          </Suspense>
-          <Suspense fallback={null}>
             <div style={{ position: 'fixed', inset: 0, zIndex: 10, pointerEvents: 'none' }}>
-              <Threads />
+              <StarsBackground />
             </div>
           </Suspense>
         </>

@@ -8,10 +8,17 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     strictPort: false,
-    allowedHosts: ["rubber-beings-muze-shades.trycloudflare.com"],
+    cors: true,
+    // Set the origin used for HMR and external preview hosts (Cloudflare preview)
+    origin: "https://earn-held-assembled-jurisdiction.trycloudflare.com",
+    hmr: {
+      host: "earn-held-assembled-jurisdiction.trycloudflare.com",
+      protocol: "wss",
+      clientPort: 443,
+    },
     proxy: {
       "/api": {
-        target: "https://rubber-beings-muze-shades.trycloudflare.com",
+        target: "https://earn-held-assembled-jurisdiction.trycloudflare.com",
         changeOrigin: true,
         secure: false,
       },
