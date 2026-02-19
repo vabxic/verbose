@@ -45,6 +45,19 @@ A modern real-time communication platform built with React, TypeScript, and Supa
 
 ---
 
+## Screenshots
+
+Below are two example screenshots demonstrating the landing page and the login modal. Save the attached image files into `public/screenshots/` with the filenames shown so they render in this README.
+
+![Landing - Hero](public/screenshots/main.png)
+
+Landing hero with animated stars background and the main CTA.
+
+![Login Modal](public/screenshots/image.png)
+
+Sign-in / Guest modal overlay shown over the animated background.
+
+
 ## Tech Stack
 
 | Category | Technology |

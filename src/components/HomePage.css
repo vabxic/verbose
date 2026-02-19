@@ -1120,8 +1120,8 @@
   margin-top: 2rem;
   padding: 1.5rem;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(12px);
 }
 
@@ -1138,7 +1138,7 @@
   gap: 0.5rem;
   font-size: 1.15rem;
   font-weight: 650;
-  color: #fff;
+  color: #ffffff;
   margin: 0;
 }
 
@@ -1162,43 +1162,44 @@
   gap: 0.4rem;
   padding: 0.4rem 0.85rem;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .home-friends-manage-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .home-friends-empty {
   text-align: center;
   padding: 1.5rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.7);
 }
 .home-friends-empty p {
   font-size: 0.9rem;
   margin: 0 0 1rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .home-friends-find-btn {
   padding: 0.5rem 1.25rem;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .home-friends-find-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .home-friends-grid {
@@ -1269,7 +1270,7 @@
 .home-friend-name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: #000000;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

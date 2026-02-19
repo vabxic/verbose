@@ -485,16 +485,9 @@ function App() {
         <section className="landing-section" id="anonymous">
           <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-8">
 
-            {/* LEFT — animated demo */}
-            <SlideInRightSection>
-              <div className="flex justify-center order-2 lg:order-1">
-                <StayAnonymousDemo />
-              </div>
-            </SlideInRightSection>
-
-            {/* RIGHT — text */}
-            <SlideInRightSection>
-              <div className="text-center lg:text-left order-1 lg:order-2">
+            {/* LEFT — text (mobile-first: appears above) */}
+            <SlideInRightSection className="order-1 lg:order-2">
+              <div className="text-center lg:text-left">
                 <h2 className="text-4xl font-bold">
                   <DecryptedText
                     text="Stay Anonymous"
@@ -512,6 +505,13 @@ function App() {
                   Chat and connect without revealing your identity. Your privacy is our priority.
                   Enjoy complete anonymity while engaging with the Verbose community.
                 </p>
+              </div>
+            </SlideInRightSection>
+
+            {/* RIGHT — animated demo (mobile: below) */}
+            <SlideInRightSection className="order-2 lg:order-1">
+              <div className="flex justify-center">
+                <StayAnonymousDemo />
               </div>
             </SlideInRightSection>
 
