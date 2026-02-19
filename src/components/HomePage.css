@@ -1118,11 +1118,20 @@
    ══════════════════════════════════════════════════ */
 .home-friends-section {
   margin-top: 2rem;
-  padding: 1.5rem;
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  padding: 2rem;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.home-friends-section:hover {
+  transform: translateY(-4px);
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
 }
 
 .home-friends-section-header {
@@ -1198,6 +1207,27 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
+/* Light theme: make friends section behave like other cards */
+.home-page.light-theme .home-friends-section {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.home-page.light-theme .home-friends-section:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.home-page.light-theme .home-friends-section-title,
+.home-page.light-theme .home-friends-manage-btn,
+.home-page.light-theme .home-friends-find-btn {
+  color: #000000;
+}
+
+.home-page.light-theme .home-friends-empty,
+.home-page.light-theme .home-friends-empty p {
+  color: rgba(0, 0, 0, 0.75);
+}
 .home-friends-find-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
@@ -1270,7 +1300,7 @@
 .home-friend-name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #000000;
+  color: #ffffff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1291,6 +1321,22 @@
 }
 .home-friend-card:hover .home-friend-chat-icon {
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* Light theme overrides for friend list items */
+.home-page.light-theme .home-friend-name {
+  color: #000000;
+}
+.home-page.light-theme .home-friend-status-text {
+  color: rgba(0, 0, 0, 0.6);
+}
+.home-page.light-theme .home-friend-avatar {
+  color: rgba(0, 0, 0, 0.85);
+  background: rgba(0,0,0,0.04);
+}
+.home-page.light-theme .home-friend-card {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.06);
 }
 
 /* ══════════════════════════════════════════════════
