@@ -268,6 +268,35 @@ function SlideInRightSection({ children, className = "" }: { children: React.Rea
   );
 }
 
+/* Slide-in from left section wrapper */
+function SlideInLeftSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const spring = useSpring({
+    opacity: visible ? 1 : 0,
+    transform: visible ? "translateX(0px)" : "translateX(-100px)",
+    config: { tension: 80, friction: 26 },
+  });
+
+  return (
+    <animated.div ref={ref} style={spring} className={className}>
+      {children}
+    </animated.div>
+  );
+}
+
 function App() {
   const { user, session, loading, isAnonymous } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
@@ -420,30 +449,34 @@ function App() {
           <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-8">
 
             {/* LEFT — text */}
-            <div className="text-center lg:text-left">
-              <h2 className="text-4xl font-bold">
-                <DecryptedText
-                  text="Built for Everything"
-                  speed={50}
-                  maxIterations={12}
-                  sequential
-                  revealDirection="start"
-                  animateOn="view"
-                  parentClassName="section-title"
-                  className="section-char"
-                  encryptedClassName="section-encrypted"
-                />
-              </h2>
-              <p className="mt-4 text-white/60">
-                Text, voice, and video — all in one place. Crystal-clear calls,
-                instant messaging, and seamless file sharing with end-to-end encryption.
-              </p>
-            </div>
+            <SlideInLeftSection>
+              <div className="text-center lg:text-left">
+                <h2 className="text-4xl font-bold">
+                  <DecryptedText
+                    text="Built for Everything"
+                    speed={50}
+                    maxIterations={12}
+                    sequential
+                    revealDirection="start"
+                    animateOn="view"
+                    parentClassName="section-title"
+                    className="section-char"
+                    encryptedClassName="section-encrypted"
+                  />
+                </h2>
+                <p className="mt-4 text-white/60">
+                  Text, voice, and video — all in one place. Crystal-clear calls,
+                  instant messaging, and seamless file sharing with end-to-end encryption.
+                </p>
+              </div>
+            </SlideInLeftSection>
 
             {/* RIGHT — animated demo */}
-            <div className="flex justify-center">
-              <BuiltForEverythingDemo />
-            </div>
+            <SlideInLeftSection>
+              <div className="flex justify-center">
+                <BuiltForEverythingDemo />
+              </div>
+            </SlideInLeftSection>
 
           </div>
         </section>
@@ -453,30 +486,34 @@ function App() {
           <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-8">
 
             {/* LEFT — animated demo */}
-            <div className="flex justify-center order-2 lg:order-1">
-              <StayAnonymousDemo />
-            </div>
+            <SlideInRightSection>
+              <div className="flex justify-center order-2 lg:order-1">
+                <StayAnonymousDemo />
+              </div>
+            </SlideInRightSection>
 
             {/* RIGHT — text */}
-            <div className="text-center lg:text-left order-1 lg:order-2">
-              <h2 className="text-4xl font-bold">
-                <DecryptedText
-                  text="Stay Anonymous"
-                  speed={50}
-                  maxIterations={12}
-                  sequential
-                  revealDirection="start"
-                  animateOn="view"
-                  parentClassName="section-title"
-                  className="section-char"
-                  encryptedClassName="section-encrypted"
-                />
-              </h2>
-              <p className="mt-4 text-white/60">
-                Chat and connect without revealing your identity. Your privacy is our priority.
-                Enjoy complete anonymity while engaging with the Verbose community.
-              </p>
-            </div>
+            <SlideInRightSection>
+              <div className="text-center lg:text-left order-1 lg:order-2">
+                <h2 className="text-4xl font-bold">
+                  <DecryptedText
+                    text="Stay Anonymous"
+                    speed={50}
+                    maxIterations={12}
+                    sequential
+                    revealDirection="start"
+                    animateOn="view"
+                    parentClassName="section-title"
+                    className="section-char"
+                    encryptedClassName="section-encrypted"
+                  />
+                </h2>
+                <p className="mt-4 text-white/60">
+                  Chat and connect without revealing your identity. Your privacy is our priority.
+                  Enjoy complete anonymity while engaging with the Verbose community.
+                </p>
+              </div>
+            </SlideInRightSection>
 
           </div>
         </section>
@@ -486,29 +523,33 @@ function App() {
           <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center px-8">
 
             {/* LEFT — text */}
-            <div className="text-center lg:text-left">
-              <h2 className="text-4xl font-bold">
-                <DecryptedText
-                  text="User-based Cloud Storage"
-                  speed={50}
-                  maxIterations={12}
-                  sequential
-                  revealDirection="start"
-                  animateOn="view"
-                  parentClassName="section-title"
-                  className="section-char"
-                  encryptedClassName="section-encrypted"
-                />
-              </h2>
-              <p className="mt-4 text-white/60">
-                Your files, your control — secure, private storage synced across devices.
-              </p>
-            </div>
+            <SlideInLeftSection>
+              <div className="text-center lg:text-left">
+                <h2 className="text-4xl font-bold">
+                  <DecryptedText
+                    text="User-based Cloud Storage"
+                    speed={50}
+                    maxIterations={12}
+                    sequential
+                    revealDirection="start"
+                    animateOn="view"
+                    parentClassName="section-title"
+                    className="section-char"
+                    encryptedClassName="section-encrypted"
+                  />
+                </h2>
+                <p className="mt-4 text-white/60">
+                  Your files, your control — secure, private storage synced across devices.
+                </p>
+              </div>
+            </SlideInLeftSection>
 
             {/* RIGHT — animated demo */}
-            <div className="flex justify-center">
-              <CloudStorageDemo />
-            </div>
+            <SlideInLeftSection>
+              <div className="flex justify-center">
+                <CloudStorageDemo />
+              </div>
+            </SlideInLeftSection>
 
           </div>
         </section>

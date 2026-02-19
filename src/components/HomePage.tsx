@@ -6,6 +6,8 @@ import LoginPage from './LoginPage';
 import ChatRoom from './ChatRoom';
 import FriendChat from './FriendChat';
 import BackgroundHome from './background_home';
+import BackgroundCustomizer, { BACKGROUND_OPTIONS } from './BackgroundCustomizer';
+import Switch from './switch';
 import { createRoom, joinRoomByCode, sendMessage } from '../lib/rooms';
 import type { Room } from '../lib/rooms';
 import {
@@ -57,6 +59,14 @@ export const HomePage: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [roomError, setRoomError] = useState('');
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [selectedBgId, setSelectedBgId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chatroom-bg-id') || 'dark-radial';
+    }
+    return 'dark-radial';
+  });
+  const [showBgCustomizer, setShowBgCustomizer] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(false);
   const prevUserIdRef = useRef(user?.id);
   const urlJoinAttemptedRef = useRef(false);
 
@@ -89,6 +99,33 @@ export const HomePage: React.FC = () => {
     roomId: string;
   } | null>(null);
 
+  // ── Background customizer helpers ──
+  const getBackgroundStyle = () => {
+    if (!selectedBgId) return {};
+    const bgOpt = BACKGROUND_OPTIONS.find((b) => b.id === selectedBgId);
+    return bgOpt ? bgOpt.style : {};
+  };
+
+  const handleSelectBackground = (bgId: string | null) => {
+    setSelectedBgId(bgId);
+    if (bgId) {
+      localStorage.setItem('chatroom-bg-id', bgId);
+    } else {
+      localStorage.removeItem('chatroom-bg-id');
+    }
+  };
+
+  const handleThemeToggle = (checked: boolean) => {
+    setIsLightTheme(checked);
+    if (checked) {
+      setSelectedBgId('indigo-radial');
+      localStorage.setItem('chatroom-bg-id', 'indigo-radial');
+    } else {
+      setSelectedBgId('dark-radial');
+      localStorage.setItem('chatroom-bg-id', 'dark-radial');
+    }
+  };
+
   const displayName = isAnonymous
     ? 'Guest'
     : user?.user_metadata?.full_name ||
@@ -96,7 +133,22 @@ export const HomePage: React.FC = () => {
       user?.user_metadata?.username ||
       user?.email?.split('@')[0] ||
       'User';
+  // ── Sync background from localStorage and listen for cross-tab updates ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedBgId = localStorage.getItem('chatroom-bg-id') || 'dark-radial';
+    if (storedBgId !== selectedBgId) {
+      setSelectedBgId(storedBgId);
+    }
 
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'chatroom-bg-id') {
+        setSelectedBgId(e.newValue || 'dark-radial');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   // Close upgrade login when user identity changes (successful login/signup)
   useEffect(() => {
     if (user?.id && user.id !== prevUserIdRef.current) {
@@ -434,7 +486,12 @@ export const HomePage: React.FC = () => {
 
   return (
     <BackgroundHome>
-      <div className="home-page">
+      <div className={`home-page ${isLightTheme ? 'light-theme' : ''}`}>
+        {/* Background layer */}
+        <div
+          className="home-bg-layer"
+          style={getBackgroundStyle()}
+        />
 
       {/* ── Join Room Modal ── */}
       {showJoinModal && (
@@ -472,6 +529,15 @@ export const HomePage: React.FC = () => {
         </div>
       )}
 
+      {/* ── Background Customizer ── */}
+      {showBgCustomizer && (
+        <BackgroundCustomizer
+          selectedBgId={selectedBgId}
+          onSelectBackground={handleSelectBackground}
+          onClose={() => setShowBgCustomizer(false)}
+        />
+      )}
+
       {/* Top bar */}
       <header className="home-header">
         <div className="home-header-left">
@@ -492,8 +558,15 @@ export const HomePage: React.FC = () => {
           </button>
         </nav>
         <div className="home-header-right">
+          {/* Theme toggle switch */}
+          <Switch isChecked={isLightTheme} onChange={handleThemeToggle} />
           {/* Settings icon */}
-          <button className="home-header-icon-btn" aria-label="Settings" title="Settings">
+          <button 
+            className="home-header-icon-btn" 
+            aria-label="Settings" 
+            title="Settings"
+            onClick={() => setShowBgCustomizer(true)}
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -561,6 +634,22 @@ export const HomePage: React.FC = () => {
             <h3>Join a Room</h3>
             <p>Enter a room code to join someone's conversation</p>
           </div>
+
+          {/* Friends — only for signed-in users */}
+          {!isAnonymous && (
+            <div className="home-card" onClick={() => { setShowFindPeople(true); loadFriendData(); }}>
+              <div className="home-card-icon home-card-icon-friends">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <h3>Connect with Friends</h3>
+              <p>Chat directly with your friends one-on-one</p>
+            </div>
+          )}
 
           {/* (Voice & Video call cards removed) */}
         </div>

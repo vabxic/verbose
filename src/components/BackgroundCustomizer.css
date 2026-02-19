@@ -1,0 +1,242 @@
+/* ── Background Customizer Overlay & Panel ── */
+
+.bg-customizer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bg-customizer-panel {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Header */
+.bg-customizer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.bg-customizer-title-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bg-customizer-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.bg-customizer-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.bg-customizer-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* Description */
+.bg-customizer-desc {
+  padding: 12px 20px;
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Grid */
+.bg-customizer-grid {
+  flex: 1;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.bg-customizer-option {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: none;
+  overflow: hidden;
+}
+
+.bg-customizer-option:hover {
+  transform: scale(1.05);
+}
+
+.bg-customizer-option.selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Background Preview Circle */
+.bg-preview {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* previews use default border-radius (12px) */
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.bg-preview-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8px;
+  z-index: 4;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  padding: 5px 10px;
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+  animation: fadeInScale 0.4s ease forwards;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bg-preview-label-small {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8px;
+  z-index: 4;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+  padding: 4px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.bg-preview-none {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border: 2px dashed #d1d5db;
+}
+
+/* Footer */
+.bg-customizer-footer {
+  padding: 12px 20px 20px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.bg-customizer-footer-text {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .bg-customizer-panel {
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .bg-customizer-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .bg-customizer-header {
+    padding: 12px 16px;
+  }
+
+  .bg-customizer-desc {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .bg-customizer-footer {
+    padding: 10px 16px 16px;
+  }
+}

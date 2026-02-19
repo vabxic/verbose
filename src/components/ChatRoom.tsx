@@ -13,9 +13,10 @@ import type { Room, RoomMessage, RoomParticipant } from '../lib/rooms';
 import { WebRTCService } from '../lib/webrtc';
 import type { CallType } from '../lib/webrtc';
 import { saveRoom, unsaveRoom, isRoomSaved, sendFriendRequest } from '../lib/social';
-import { uploadRoomFile, formatFileSize, getFileUrl } from '../lib/drive';
+import { uploadRoomFile, formatFileSize, getFileUrl, deleteAllRoomFiles } from '../lib/drive';
 import type { UploadProgress } from '../lib/drive';
 import RoomDrive from './RoomDrive';
+import BackgroundCustomizer, { BACKGROUND_OPTIONS } from './BackgroundCustomizer';
 import './ChatRoom.css';
 
 // Helper: check mime types for inline preview
@@ -82,6 +83,45 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
   // File preview state
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  // Background customizer state
+  const [showBgCustomizer, setShowBgCustomizer] = useState(false);
+  const [selectedBgId, setSelectedBgId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chatroom-bg-id') || 'dark-radial';
+    }
+    return 'dark-radial';
+  });
+
+  // Load background style from shared options
+  const getBackgroundStyle = () => {
+    if (!selectedBgId) return {};
+    const opt = BACKGROUND_OPTIONS.find((b) => b.id === selectedBgId);
+    return opt ? opt.style : {};
+  };
+
+  const handleSelectBackground = (bgId: string | null) => {
+    setSelectedBgId(bgId);
+    if (bgId) {
+      localStorage.setItem('chatroom-bg-id', bgId);
+    } else {
+      localStorage.removeItem('chatroom-bg-id');
+    }
+  };
+
+  // Read saved background on mount and listen for cross-tab changes
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const v = localStorage.getItem('chatroom-bg-id') || 'dark-radial';
+    if (v !== selectedBgId) setSelectedBgId(v);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'chatroom-bg-id') {
+        setSelectedBgId(e.newValue || 'dark-radial');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -376,13 +416,31 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
         // Best-effort
       }
       await leaveRoom(room.id, user.id);
-      // If the current user is the host (creator), deactivate the room
+
+      // If the current user is the host (creator), handle host transfer or room closure
       if (user.id === room.created_by) {
         try {
           const { supabase } = await import('../lib/supabase');
-          await supabase.from('rooms').update({ is_active: false }).eq('id', room.id);
+          const remaining = await getRoomParticipants(room.id);
+
+          if (remaining.length > 0) {
+            // Transfer host to a random remaining participant
+            const newHost = remaining[Math.floor(Math.random() * remaining.length)];
+            await supabase.from('rooms').update({ created_by: newHost.user_id }).eq('id', room.id);
+            await sendMessage(
+              room.id,
+              'system',
+              'System',
+              `${newHost.display_name || 'A participant'} is now the host`,
+              'system',
+            );
+          } else {
+            // No one left — deactivate room and delete all storage
+            await supabase.from('rooms').update({ is_active: false }).eq('id', room.id);
+            await deleteAllRoomFiles(room.id);
+          }
         } catch (err) {
-          console.warn('[ChatRoom] Could not deactivate room:', err);
+          console.warn('[ChatRoom] Could not handle host transfer / room closure:', err);
         }
       }
     }
@@ -565,7 +623,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
   return (
     <div className="chatroom">
-      <div className="chatroom-main">
+      <div className="chatroom-main" style={getBackgroundStyle()}>
       {/* ── Header ─────────────────────── */}
       <header className="chatroom-header">
         <div className="chatroom-header-left">
@@ -614,6 +672,29 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
             </button>
           </div>
 
+          {/* Drive & Background — header-level buttons (visible on desktop & mobile) */}
+          <div className="chatroom-actions-global">
+            <button
+              className="chatroom-hdr-btn chatroom-drive-btn"
+              onClick={() => setShowDrive(true)}
+              title="Open Drive"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+            <button
+              className="chatroom-hdr-btn chatroom-bg-btn"
+              onClick={() => setShowBgCustomizer(true)}
+              title="Background"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          </div>
+
           {/* ── More menu (3-dot) – visible on both desktop & mobile ── */}
           <div className="chatroom-more-wrapper" ref={moreMenuRef}>
             <button
@@ -645,14 +726,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                   </svg>
                   <span>Add friend</span>
                 </button>
-                <button className="chatroom-more-item" onClick={() => { copyCode(); setShowMoreMenu(false); }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                  <span>{room.code}</span>
-                  {showCopied && <span className="chatroom-copied-toast">Copied!</span>}
-                </button>
                 <button className="chatroom-more-item" onClick={() => { shareLink(); setShowMoreMenu(false); }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -661,12 +734,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                   <span>Share link</span>
                   {showLinkCopied && <span className="chatroom-copied-toast">Link copied!</span>}
                 </button>
-                <button className="chatroom-more-item" onClick={() => { setShowDrive((v) => !v); setShowMoreMenu(false); }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span>{showDrive ? 'Close drive' : 'Drive'}</span>
-                </button>
+                {/* Removed room code, Drive and Background from the more-menu — now header actions */}
               </div>
             )}
           </div>
@@ -1138,6 +1206,15 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       {/* ── Drive side-panel ──────────── */}
       {showDrive && (
         <RoomDrive roomId={room.id} onClose={() => setShowDrive(false)} />
+      )}
+
+      {/* ── Background Customizer Panel ── */}
+      {showBgCustomizer && (
+        <BackgroundCustomizer
+          selectedBgId={selectedBgId}
+          onSelectBackground={handleSelectBackground}
+          onClose={() => setShowBgCustomizer(false)}
+        />
       )}
     </div>
   );

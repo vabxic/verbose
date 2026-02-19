@@ -35,7 +35,7 @@ const StyledWrapper = styled.div`
     margin-top: -45px;
     margin-left: -75px;
     border-radius: 3px;
-    background: #666666;
+    background: #89cef6;
     animation-name: dot2_;
   }
 

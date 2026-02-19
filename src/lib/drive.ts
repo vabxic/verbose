@@ -357,6 +357,47 @@ export async function deleteRoomFile(file: RoomFile): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Delete ALL files for a room (storage blobs + metadata rows).
+ * Called when a room is closed / deactivated.
+ */
+export async function deleteAllRoomFiles(roomId: string): Promise<void> {
+  // 1. Fetch every file (including non-ready) so we can remove blobs
+  const { data: files, error: listErr } = await supabase
+    .from('room_files')
+    .select('*')
+    .eq('room_id', roomId);
+
+  if (listErr) {
+    console.warn('[drive] Could not list room files for cleanup:', listErr.message);
+    return;
+  }
+
+  if (!files || files.length === 0) return;
+
+  // 2. Collect Supabase Storage paths to bulk-delete
+  const storagePaths: string[] = [];
+  for (const f of files as RoomFile[]) {
+    if (f.storage_path && !f.storage_path.startsWith('cloud://')) {
+      storagePaths.push(f.storage_path);
+    }
+  }
+
+  // 3. Remove blobs from Supabase Storage (best-effort)
+  if (storagePaths.length > 0) {
+    const { error: rmErr } = await supabase.storage.from(BUCKET).remove(storagePaths);
+    if (rmErr) console.warn('[drive] Could not remove storage blobs:', rmErr.message);
+  }
+
+  // 4. Delete all metadata rows for this room
+  const { error: delErr } = await supabase
+    .from('room_files')
+    .delete()
+    .eq('room_id', roomId);
+
+  if (delErr) console.warn('[drive] Could not delete room_files rows:', delErr.message);
+}
+
 // ── Realtime ────────────────────────────────────
 
 export function subscribeToRoomFiles(

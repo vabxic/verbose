@@ -204,6 +204,11 @@ class GoogleDriveProvider implements CloudProvider {
       `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
     );
+    if (!searchResp.ok) {
+      const body = await searchResp.text();
+      console.warn('[CloudStorage] Drive folder search failed', { status: searchResp.status, body });
+      throw new Error(`Drive folder search failed: ${searchResp.status} ${body}`);
+    }
     const searchData = await searchResp.json();
 
     if (searchData.files && searchData.files.length > 0) {
@@ -222,6 +227,11 @@ class GoogleDriveProvider implements CloudProvider {
         mimeType: 'application/vnd.google-apps.folder',
       }),
     });
+    if (!createResp.ok) {
+      const body = await createResp.text();
+      console.warn('[CloudStorage] Drive folder create failed', { status: createResp.status, body });
+      throw new Error(`Drive folder create failed: ${createResp.status} ${body}`);
+    }
     const folder = await createResp.json();
     return folder.id;
   }
@@ -311,6 +321,7 @@ class GoogleDriveProvider implements CloudProvider {
 
     if (!resp.ok) {
       const text = await resp.text();
+      console.warn('[CloudStorage] Google Drive multipart upload failed', { status: resp.status, body: text });
       throw new Error(`Google Drive upload failed: ${resp.status} ${text}`);
     }
 
@@ -345,11 +356,17 @@ class GoogleDriveProvider implements CloudProvider {
     );
 
     if (!initResp.ok) {
-      throw new Error(`Resumable upload init failed: ${initResp.status}`);
+      const body = await initResp.text();
+      console.warn('[CloudStorage] Resumable upload init failed', { status: initResp.status, body });
+      throw new Error(`Resumable upload init failed: ${initResp.status} ${body}`);
     }
 
     const uploadUri = initResp.headers.get('Location');
-    if (!uploadUri) throw new Error('No resumable upload URI returned.');
+    if (!uploadUri) {
+      const text = await initResp.text();
+      console.warn('[CloudStorage] Resumable upload init missing Location header', { status: initResp.status, body: text });
+      throw new Error('No resumable upload URI returned.');
+    }
 
     // Step 2: Upload the file with XHR for progress tracking
     return new Promise<string>((resolve, reject) => {
@@ -401,7 +418,10 @@ class GoogleDriveProvider implements CloudProvider {
     );
 
     if (!resp.ok) {
-      console.warn('[CloudStorage] Could not share file:', await resp.text());
+      const body = await resp.text();
+      console.warn('[CloudStorage] Could not share file', { fileId, status: resp.status, body });
+      // Keep silent for users but throw to bubble up in dev flows
+      throw new Error(`Drive share failed: ${resp.status} ${body}`);
     }
   }
 

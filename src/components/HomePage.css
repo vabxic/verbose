@@ -8,6 +8,80 @@
   color: #e0e0e0;
 }
 
+.home-page.light-theme {
+  color: #000000;
+}
+
+.home-page.light-theme .home-welcome-title,
+.home-page.light-theme .home-welcome-name {
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+  background: none;
+}
+
+.home-page.light-theme .home-card h3,
+.home-page.light-theme .home-nav-link,
+.home-page.light-theme .home-nav-link:hover,
+.home-page.light-theme .home-nav-link.active,
+.home-page.light-theme h1,
+.home-page.light-theme h2,
+.home-page.light-theme h3,
+.home-page.light-theme h4,
+.home-page.light-theme h5,
+.home-page.light-theme h6 {
+  color: #000000;
+}
+
+.home-page.light-theme .home-welcome-subtitle,
+.home-page.light-theme .home-card p {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.home-page.light-theme .home-header {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.home-page.light-theme .home-header-icon-btn[aria-label="Settings"] {
+  color: #000000;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.home-page.light-theme .home-header-icon-btn[aria-label="Settings"]:hover {
+  background: rgba(0,0,0,0.04);
+  color: #000000;
+}
+
+.home-page.light-theme .home-card,
+.home-page.light-theme .home-welcome-card {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.home-page.light-theme .home-card:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.home-page.light-theme .home-guest-banner {
+  background: rgba(255, 255, 255, 0.75);
+  color: rgba(0, 0, 0, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.home-page.light-theme .home-guest-banner-btn {
+  background: #ffffff;
+  color: #000000;
+  border-color: rgba(0,0,0,0.06);
+}
+
+.home-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .home-background {
   position: fixed;
   inset: 0;
@@ -31,7 +105,7 @@
   border-radius: 16px;
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
@@ -128,7 +202,7 @@
   padding: 2.5rem;
   margin-bottom: 2.5rem;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(16px);
 }
@@ -245,7 +319,7 @@
 .home-card {
   padding: 2rem;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);
   transition: all 0.3s ease;
@@ -254,7 +328,7 @@
 
 .home-card:hover {
   transform: translateY(-4px);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.35);
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
 }
@@ -380,7 +454,7 @@
   }
 
   .home-main {
-    padding: 2rem 1rem;
+    padding: 5.5rem 1rem 2rem;
   }
 
   .home-welcome-card {
@@ -423,6 +497,12 @@
 .home-card-icon-join {
   background: rgba(120, 200, 255, 0.12) !important;
   color: #78c8ff !important;
+}
+
+/* ── Friends Card icon ── */
+.home-card-icon-friends {
+  background: rgba(168, 120, 255, 0.12) !important;
+  color: #a878ff !important;
 }
 
 /* ── Modal overlay ── */

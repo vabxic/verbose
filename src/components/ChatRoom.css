@@ -298,6 +298,13 @@
   gap: 0.15rem;
 }
 
+/* ── Header actions visible on all sizes (Drive / Background) ── */
+.chatroom-actions-global {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
 /* ── Mobile more-menu ───────────────────────── */
 .chatroom-more-wrapper {
   display: block; /* visible on both desktop and mobile */
@@ -867,12 +874,14 @@
 .chatroom-system-msg {
   text-align: center;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: #000000; /* system messages appear in black */
   padding: 0.6rem 1rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.92); /* light background to contrast black text */
   border-radius: 12px;
   margin: 0.3rem auto;
   max-width: 70%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
 /* Message bubble */

@@ -9,20 +9,6 @@ export default defineConfig({
     port: 5173,
     strictPort: false,
     cors: true,
-    // Set the origin used for HMR and external preview hosts (Cloudflare preview)
-    origin: "https://earn-held-assembled-jurisdiction.trycloudflare.com",
-    hmr: {
-      host: "earn-held-assembled-jurisdiction.trycloudflare.com",
-      protocol: "wss",
-      clientPort: 443,
-    },
-    proxy: {
-      "/api": {
-        target: "https://earn-held-assembled-jurisdiction.trycloudflare.com",
-        changeOrigin: true,
-        secure: false,
-      },
-    },
   },
   build: {
     outDir: "dist",

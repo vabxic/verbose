@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../providers/auth';
+import BackgroundCustomizer, { BACKGROUND_OPTIONS } from './BackgroundCustomizer';
 import {
   sendDirectMessage,
   getDirectMessages,
@@ -59,6 +60,26 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [incomingCall, setIncomingCall] = useState<{ type: CallType } | null>(null);
   const [lineBusyError, setLineBusyError] = useState(false);
+
+  // Background customization
+  const [selectedBgId, setSelectedBgId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chatroom-bg-id') || 'dark-radial';
+    }
+    return 'dark-radial';
+  });
+  const [showBgCustomizer, setShowBgCustomizer] = useState(false);
+
+  type VideoCorner = 'corner-bottom-right' | 'corner-bottom-left' | 'corner-top-right' | 'corner-top-left';
+  const [localVideoCorner, setLocalVideoCorner] = useState<VideoCorner>('corner-bottom-right');
+
+  const cycleVideoCorner = useCallback(() => {
+    setLocalVideoCorner((prev) => {
+      const order: VideoCorner[] = ['corner-bottom-right', 'corner-bottom-left', 'corner-top-left', 'corner-top-right'];
+      const idx = order.indexOf(prev);
+      return order[(idx + 1) % order.length];
+    });
+  }, []);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -283,6 +304,22 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
     await webrtcRef.current?.rejectCall();
   };
 
+  // ── Background customizer helpers ──
+  const getBackgroundStyle = () => {
+    if (!selectedBgId) return {};
+    const bgOpt = BACKGROUND_OPTIONS.find((b) => b.id === selectedBgId);
+    return bgOpt ? bgOpt.style : {};
+  };
+
+  const handleSelectBackground = (bgId: string | null) => {
+    setSelectedBgId(bgId);
+    if (bgId) {
+      localStorage.setItem('chatroom-bg-id', bgId);
+    } else {
+      localStorage.removeItem('chatroom-bg-id');
+    }
+  };
+
   const formatDuration = (secs: number) => {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
@@ -489,6 +526,12 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
 
   return (
     <div className="friend-chat">
+      {/* Background layer */}
+      <div
+        className="fc-bg-layer"
+        style={getBackgroundStyle()}
+      />
+
       {/* Header */}
       <header className="fc-header">
         <button className="fc-back-btn" onClick={() => { if (inCall) hangUp(); onBack(); }}>
@@ -528,8 +571,27 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
           </button>
+          <button 
+            className="fc-clear-btn" 
+            onClick={() => setShowBgCustomizer(true)} 
+            title="Background settings"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </div>
       </header>
+
+      {/* Background Customizer */}
+      {showBgCustomizer && (
+        <BackgroundCustomizer
+          selectedBgId={selectedBgId}
+          onSelectBackground={handleSelectBackground}
+          onClose={() => setShowBgCustomizer(false)}
+        />
+      )}
 
       {/* Clear chat confirmation */}
       {showClearConfirm && (
@@ -558,34 +620,96 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
         </div>
       )}
 
-      {/* ── Call overlay ─────────── */}
-      {inCall && (
-        <div className={`fc-call-overlay ${callType}`}>
-          {callType === 'video' ? (
-            <div className="fc-call-videos">
-              <video ref={remoteVideoRef} className="fc-remote-video" autoPlay playsInline />
-              <video ref={localVideoRef} className="fc-local-video" autoPlay playsInline muted />
+      {/* ── Audio call bar (top of chat, non-covering) ── */}
+      {inCall && callType === 'audio' && (
+        <div className="fc-audio-call-bar">
+          <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+
+          <div className="fc-audio-bar-left">
+            <div className="fc-audio-bar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
             </div>
-          ) : (
-            <div className="fc-audio-visual">
-              <div className="fc-audio-avatar">
+            <div className="fc-audio-bar-info">
+              <span className="fc-audio-bar-label">Voice call</span>
+              <span className="fc-audio-bar-timer">{formatDuration(elapsedSeconds)}</span>
+            </div>
+            {connectionState && connectionState !== 'connected' && (
+              <span className="fc-audio-bar-status">
+                {connectionState === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
+              </span>
+            )}
+          </div>
+
+          <div className="fc-audio-bar-controls">
+            <button
+              className={`fc-audio-bar-btn${!audioEnabled ? ' off' : ''}`}
+              onClick={toggleAudio}
+              title={audioEnabled ? 'Mute' : 'Unmute'}
+            >
+              {audioEnabled ? (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                   <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                   <line x1="12" y1="19" x2="12" y2="23" />
                   <line x1="8" y1="23" x2="16" y2="23" />
                 </svg>
-              </div>
-              <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
-            </div>
-          )}
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                  <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .38-.03.75-.08 1.12" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              )}
+            </button>
+
+            <button className="fc-audio-bar-btn" title="Speaker">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </svg>
+            </button>
+
+            <button className="fc-audio-bar-btn hangup" onClick={hangUp} title="End call">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: 'rotate(136deg)' }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Video call overlay (full page) ── */}
+      {inCall && callType === 'video' && (
+        <div className="fc-video-call-overlay">
+          <div className="fc-call-videos">
+            <video ref={remoteVideoRef} className="fc-remote-video" autoPlay playsInline />
+            <video
+              ref={localVideoRef}
+              className={`fc-local-video ${localVideoCorner}`}
+              autoPlay
+              playsInline
+              muted
+              onClick={cycleVideoCorner}
+              title="Click to move to next corner"
+            />
+          </div>
 
           <div className="fc-call-timer">{formatDuration(elapsedSeconds)}</div>
-          <div className="fc-call-status">
-            {connectionState === 'connecting' && 'Connecting…'}
-            {connectionState === 'connected' && 'Connected'}
-            {connectionState === 'disconnected' && 'Reconnecting…'}
-          </div>
+
+          {connectionState && connectionState !== 'connected' && (
+            <div className="fc-call-status">
+              {connectionState === 'connecting' && 'Connecting…'}
+              {connectionState === 'disconnected' && 'Reconnecting…'}
+            </div>
+          )}
 
           <div className="fc-call-controls">
             <button
@@ -611,32 +735,32 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
               )}
             </button>
 
-            {callType === 'video' && (
-              <button
-                className={`fc-call-ctrl-btn ${!videoEnabled ? 'off' : ''}`}
-                onClick={toggleVideo}
-                title={videoEnabled ? 'Camera off' : 'Camera on'}
-              >
-                {videoEnabled ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="23 7 16 12 23 17 23 7" />
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
-                )}
-              </button>
-            )}
+            <button
+              className={`fc-call-ctrl-btn ${!videoEnabled ? 'off' : ''}`}
+              onClick={toggleVideo}
+              title={videoEnabled ? 'Camera off' : 'Camera on'}
+            >
+              {videoEnabled ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              )}
+            </button>
 
             <button className="fc-call-ctrl-btn hangup" onClick={hangUp} title="End call">
-              <svg className="fc-incoming-reject-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: 'rotate(136deg)' }}>
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
             </button>
           </div>
+
+          <div className="fc-video-corner-hint">Tap your camera to move</div>
         </div>
       )}
 
@@ -748,9 +872,13 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
           onChange={(e) => handleFileUpload(e.target.files)}
         />
         <button className="fc-upload-btn" onClick={() => fileInputRef.current?.click()} disabled={isSending} title="Send file">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
+          {isSending ? (
+            <div className="fc-upload-spinner" />
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          )}
         </button>
         <button className="fc-send-btn" onClick={handleSend} disabled={!inputValue.trim() || isSending}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

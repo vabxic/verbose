@@ -13,6 +13,14 @@
   overflow: hidden;
 }
 
+/* Background layer for customization */
+.fc-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 /* ── Header ── */
 .fc-header {
   display: flex;
@@ -135,6 +143,8 @@
   gap: 0.15rem;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  position: relative;
+  z-index: 5;
 }
 
 .fc-empty {
@@ -409,6 +419,8 @@
   padding: 0.75rem 1rem;
   background: rgba(8, 8, 12, 0.9);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  z-index: 5;
 }
 
 .fc-input {
@@ -453,9 +465,27 @@
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
+.fc-upload-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 .fc-upload-btn svg {
   width: 16px;
   height: 16px;
+}
+
+/* Upload spinner animation */
+.fc-upload-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: fcLoadingSpin 0.8s linear infinite;
+}
+
+@keyframes fcLoadingSpin {
+  to { transform: rotate(360deg); }
 }
 
 .fc-send-btn {
@@ -503,11 +533,152 @@
   height: 18px;
 }
 
-/* ── Call Overlay ── */
-.fc-call-overlay {
-  position: absolute;
-  inset: 0;
-  background: #000000;
+/* ── Audio Call Bar (compact, non-covering) ── */
+.fc-audio-call-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 1rem;
+  background: rgba(8, 8, 16, 0.96);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px);
+  flex-shrink: 0;
+  z-index: 20;
+  gap: 0.75rem;
+  min-height: 52px;
+}
+
+.fc-audio-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.fc-audio-bar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(80, 200, 120, 0.15);
+  border: 1px solid rgba(80, 200, 120, 0.3);
+  flex-shrink: 0;
+  animation: fcBarPulse 2s ease-in-out infinite;
+}
+
+.fc-audio-bar-icon svg {
+  width: 16px;
+  height: 16px;
+  color: rgba(80, 200, 120, 0.9);
+}
+
+@keyframes fcBarPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(80, 200, 120, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(80, 200, 120, 0); }
+}
+
+.fc-audio-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.fc-audio-bar-label {
+  font-size: 0.73rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1;
+}
+
+.fc-audio-bar-timer {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.fc-audio-bar-status {
+  font-size: 0.72rem;
+  color: rgba(255, 200, 80, 0.85);
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 200, 80, 0.1);
+  border: 1px solid rgba(255, 200, 80, 0.2);
+  white-space: nowrap;
+}
+
+.fc-audio-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.fc-audio-bar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.fc-audio-bar-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.fc-audio-bar-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.fc-audio-bar-btn.off {
+  background: rgba(255, 80, 80, 0.15);
+  color: rgba(255, 120, 120, 0.9);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+}
+
+.fc-audio-bar-btn.off:hover {
+  background: rgba(255, 80, 80, 0.25);
+}
+
+.fc-audio-bar-btn.hangup {
+  background: linear-gradient(135deg, rgba(255, 70, 70, 0.9), rgba(220, 30, 30, 0.85));
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(255, 70, 70, 0.3);
+}
+
+.fc-audio-bar-btn.hangup:hover {
+  background: linear-gradient(135deg, rgba(255, 40, 40, 1), rgba(200, 20, 20, 1));
+  box-shadow: 0 4px 18px rgba(255, 70, 70, 0.45);
+  transform: translateY(-2px);
+}
+
+/* ── Video Call Overlay (full page) ── */
+.fc-video-call-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -516,10 +687,15 @@
   z-index: 100;
 }
 
-.fc-call-overlay.audio {
-  justify-content: center;
-  gap: 2rem;
-  padding: 2rem 1.5rem;
+.fc-video-corner-hint {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .fc-call-videos {
@@ -540,62 +716,48 @@
 }
 
 .fc-local-video {
-  position: absolute;
-  bottom: 80px;
-  right: 16px;
-  width: 120px;
+  position: fixed;
+  width: 160px;
   height: auto;
-  max-height: 160px;
+  max-height: 200px;
   aspect-ratio: auto;
   border-radius: 14px;
   object-fit: cover;
   background: #1a1a2e;
   border: 2px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
-  z-index: 3;
+  z-index: 110;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
-.fc-call-overlay.audio .fc-call-videos {
-  display: none;
+/* Local video corner positions */
+.fc-local-video.corner-bottom-right {
+  bottom: 90px;
+  right: 16px;
+  top: auto;
+  left: auto;
 }
 
-.fc-audio-visual {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  padding: 1rem;
+.fc-local-video.corner-bottom-left {
+  bottom: 90px;
+  left: 16px;
+  top: auto;
+  right: auto;
 }
 
-.fc-audio-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
-  animation: fcAudioPulse 2s ease-in-out infinite;
+.fc-local-video.corner-top-right {
+  top: 16px;
+  right: 16px;
+  bottom: auto;
+  left: auto;
 }
 
-.fc-audio-avatar svg {
-  width: 32px;
-  height: 32px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-@keyframes fcAudioPulse {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
-    transform: scale(1.05);
-  }
+.fc-local-video.corner-top-left {
+  top: 16px;
+  left: 16px;
+  bottom: auto;
+  right: auto;
 }
 
 .fc-call-status {
@@ -646,34 +808,7 @@
   z-index: 10;
 }
 
-.fc-call-overlay.audio .fc-call-status {
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: none;
-  text-align: center;
-}
-
-.fc-call-overlay.audio .fc-call-timer {
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: none;
-  font-size: 3.5rem;
-  font-weight: 700;
-  background: transparent;
-  border: none;
-  padding: 0;
-  letter-spacing: 0.1em;
-  text-align: center;
-}
-
-.fc-call-overlay.audio .fc-call-controls {
-  position: relative;
-  bottom: auto;
-  left: auto;
-  transform: none;
-}
+/* fc-call-controls is now only used in the video overlay */
 
 .fc-call-ctrl-btn {
   display: flex;
@@ -914,15 +1049,71 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 768px) {
+  .fc-header {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .fc-header-text {
+    gap: 0;
+  }
+
+  .fc-header-name {
+    font-size: 0.85rem;
+  }
+
+  .fc-header-status {
+    font-size: 0.65rem;
+  }
+
+  .fc-header-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  .fc-back-btn,
+  .fc-clear-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .fc-back-btn svg,
+  .fc-clear-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .fc-header-actions {
+    gap: 0.25rem;
+  }
+
+  .fc-call-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .fc-call-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .fc-messages {
+    padding: 0.75rem;
+  }
+
+  .fc-call-controls {
+    bottom: 32px;
+  }
+}
+
 @media (max-width: 600px) {
   .fc-file-preview {
     max-width: 240px;
   }
   .fc-msg {
     max-width: 90%;
-  }
-  .fc-call-overlay.audio .fc-call-timer {
-    font-size: 2.5rem;
   }
   .fc-call-ctrl-btn {
     width: 48px;
@@ -931,5 +1122,77 @@
   .fc-call-ctrl-btn svg {
     width: 20px;
     height: 20px;
+  }
+  .fc-local-video {
+    width: 120px;
+  }
+
+  .fc-header {
+    padding: 0.5rem 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .fc-header-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .fc-header-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .fc-header-status {
+    font-size: 0.6rem;
+  }
+
+  .fc-back-btn,
+  .fc-clear-btn,
+  .fc-call-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .fc-back-btn svg,
+  .fc-clear-btn svg,
+  .fc-call-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .fc-messages {
+    padding: 0.5rem;
+  }
+
+  .fc-input-bar {
+    padding: 0.5rem 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .fc-upload-btn,
+  .fc-send-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .fc-upload-btn svg,
+  .fc-send-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .fc-date-divider {
+    margin: 0.75rem 0 0.35rem;
+  }
+
+  .fc-date-divider span {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .fc-file-image,
+  .fc-file-video {
+    max-height: 200px;
   }
 }
