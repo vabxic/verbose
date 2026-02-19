@@ -1,5 +1,4 @@
 # Verbose
-https://verbose-eta.vercel.app/
 A modern real-time communication platform built with React, TypeScript, and Supabase. Features a sleek dark glass-morphism UI with animated backgrounds and comprehensive authentication.
 
 ![React](https://img.shields.io/badge/React-19.1.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue) ![Supabase](https://img.shields.io/badge/Supabase-Auth-green) ![Vite](https://img.shields.io/badge/Vite-5.4-purple)
