@@ -18,6 +18,7 @@ import { getActiveCloudSettings } from '../lib/cloud-storage';
 import { WebRTCService } from '../lib/webrtc';
 import type { CallType, SignalAdapter } from '../lib/webrtc';
 import './FriendChat.css';
+import SaveToDriveHelpModal from './SaveToDriveHelpModal';
 
 interface FriendChatProps {
   friendId: string;
@@ -51,6 +52,7 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [savingToDrive, setSavingToDrive] = useState<Record<string, boolean>>({});
   const [savedToDrive, setSavedToDrive] = useState<Record<string, boolean>>({});
+  const [saveHelp, setSaveHelp] = useState<{ open: boolean; downloadUrl?: string | null; fileName?: string | null }>({ open: false });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -480,7 +482,8 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
                     alert('Saved to Drive');
                   } catch (err) {
                     console.error('[FriendChat] Save to Drive failed:', err);
-                    alert('Failed to save to Drive: ' + (err as Error).message);
+                    // Show contextual modal with guidance and a direct-download link
+                    setSaveHelp({ open: true, downloadUrl: meta.url, fileName });
                   } finally {
                     setSavingToDrive((s) => ({ ...s, [msg.id]: false }));
                   }
@@ -919,6 +922,12 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
           </svg>
         </button>
       </div>
+      <SaveToDriveHelpModal
+        open={saveHelp.open}
+        onClose={() => setSaveHelp({ open: false })}
+        downloadUrl={saveHelp.downloadUrl}
+        fileName={saveHelp.fileName}
+      />
     </div>
   );
 };

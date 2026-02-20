@@ -17,6 +17,7 @@ import { getActiveCloudSettings } from '../lib/cloud-storage';
 import type { CloudSettings } from '../lib/cloud-storage';
 import CloudStorageSettings from './CloudStorageSettings';
 import './RoomDrive.css';
+import SaveToDriveHelpModal from './SaveToDriveHelpModal';
 
 interface RoomDriveProps {
   roomId: string;
@@ -43,6 +44,7 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
   const [cloudSettings, setCloudSettings] = useState<CloudSettings | null>(null);
   const [savingToDrive, setSavingToDrive] = useState<Record<string, boolean>>({});
   const [savedToDrive, setSavedToDrive] = useState<Record<string, boolean>>({});
+  const [saveHelp, setSaveHelp] = useState<{ open: boolean; downloadUrl?: string | null; fileName?: string | null }>({ open: false });
 
   const displayName =
     user?.user_metadata?.full_name ||
@@ -227,6 +229,13 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       console.error('[RoomDrive] Save to Drive error:', err);
       const errorMsg = (err as Error).message || 'Failed to save to Drive';
       setError(createErrorInfo(errorMsg));
+      // Provide direct-download link in modal so user can still download the file
+      try {
+        const downloadUrl = await getFileUrl(file);
+        setSaveHelp({ open: true, downloadUrl, fileName: file.file_name });
+      } catch (e) {
+        setSaveHelp({ open: true, downloadUrl: null, fileName: file.file_name });
+      }
     } finally {
       setSavingToDrive((prev) => ({ ...prev, [file.id]: false }));
     }
@@ -543,15 +552,23 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
 
       {/* Cloud storage settings overlay */}
       {showCloudSettings && (
-        <CloudStorageSettings
-          onClose={() => {
-            setShowCloudSettings(false);
-            // Refresh cloud settings after closing
-            if (user?.id) {
-              getActiveCloudSettings(user.id).then(setCloudSettings).catch(() => {});
-            }
-          }}
-        />
+        <>
+          <CloudStorageSettings
+            onClose={() => {
+              setShowCloudSettings(false);
+              // Refresh cloud settings after closing
+              if (user?.id) {
+                getActiveCloudSettings(user.id).then(setCloudSettings).catch(() => {});
+              }
+            }}
+          />
+          <SaveToDriveHelpModal
+            open={saveHelp.open}
+            onClose={() => setSaveHelp({ open: false })}
+            downloadUrl={saveHelp.downloadUrl}
+            fileName={saveHelp.fileName}
+          />
+        </>
       )}
     </div>
   );

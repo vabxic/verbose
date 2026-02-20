@@ -60,6 +60,7 @@ export const HomePage: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [roomError, setRoomError] = useState('');
   const [showJoinModal, setShowJoinModal] = useState(false);
+  
   const [selectedBgId, setSelectedBgId] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('chatroom-bg-id') || 'dark-radial';
@@ -614,7 +615,8 @@ export const HomePage: React.FC = () => {
               </svg>
             )}
           </button>
-          <ProfileAvatar />
+            
+            <ProfileAvatar />
         </div>
       </header>
 
@@ -1015,6 +1017,8 @@ export const HomePage: React.FC = () => {
         </div>
       )}
       </div>
+      {/* Save-to-Drive help modal (demo) */}
+      
     </BackgroundHome>
   );
 };
