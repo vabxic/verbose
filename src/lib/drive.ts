@@ -186,11 +186,37 @@ export async function saveFileToDrive(
   }
 
   // 1. Get download URL
-  const downloadUrl = await getFileUrl(file);
+  // 1. Try provider-optimized download for cloud-hosted files (avoids CORS issues)
+  let response: Response | null = null;
 
-  // 2. Fetch as Blob
-  const response = await fetch(downloadUrl);
-  if (!response.ok) throw new Error(`Failed to fetch file: ${response.status}`);
+  if (file.cloud_provider && file.cloud_file_id && file.cloud_provider === 'google_drive') {
+    // Prefer Drive API download endpoint which supports CORS for public files
+    const driveDownload = `https://www.googleapis.com/drive/v3/files/${file.cloud_file_id}?alt=media`;
+    try {
+      response = await fetch(driveDownload);
+      if (!response.ok) {
+        // Fall back to signed/shared URL
+        response = null;
+      }
+    } catch (err) {
+      response = null;
+    }
+  }
+
+  // Fallback: fetch the signed or share URL (works for Supabase signed URLs)
+  if (!response) {
+    const downloadUrl = await getFileUrl(file);
+    try {
+      response = await fetch(downloadUrl);
+    } catch (err) {
+      throw new Error(`Failed to fetch file: ${String(err)}`);
+    }
+  }
+
+  if (!response || !response.ok) {
+    const status = response ? response.status : 'network-error';
+    throw new Error(`Failed to fetch file: ${status}`);
+  }
   const blob = await response.blob();
   const fileObj = new File([blob], file.file_name, {
     type: file.mime_type || 'application/octet-stream',
