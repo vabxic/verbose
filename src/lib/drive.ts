@@ -208,8 +208,15 @@ export async function saveFileToDrive(
     const downloadUrl = await getFileUrl(file);
     try {
       response = await fetch(downloadUrl);
-    } catch (err) {
-      throw new Error(`Failed to fetch file: ${String(err)}`);
+    } catch (err: any) {
+      // Typical causes: network error or CORS blocking.
+      const msg = String(err?.message || err || 'Failed to fetch');
+      if (err instanceof TypeError || msg.toLowerCase().includes('failed to fetch')) {
+        throw new Error(
+          'Failed to fetch file. This is often caused by CORS or the file not being publicly accessible. Try opening the Room Drive and downloading manually, or ask the sender to make the file public.'
+        );
+      }
+      throw new Error(`Failed to fetch file: ${msg}`);
     }
   }
 
@@ -437,6 +444,78 @@ export async function getFileViewUrl(file: RoomFile): Promise<string> {
   const url = new URL(data.signedUrl);
   url.searchParams.delete('download');
   return url.toString();
+}
+
+/**
+ * Save a file available at `url` (or a data: URL) into the specified user's connected Drive.
+ * Returns the provider upload result.
+ */
+export async function saveUrlToDrive(
+  url: string,
+  userId: string,
+  fileName: string,
+  mimeType: string | null,
+  onProgress?: (p: UploadProgress) => void,
+): Promise<CloudUploadResult> {
+  const cloudSettings = await getActiveCloudSettings(userId);
+  if (!cloudSettings) throw new Error('Connect Google Drive first in cloud storage settings.');
+
+  // Convert data: URL directly to blob
+  let blob: Blob;
+  if (url.startsWith('data:')) {
+    const match = url.match(/^data:(.*?);base64,(.*)$/);
+    if (!match) throw new Error('Invalid data URL');
+    const bstr = atob(match[2]);
+    const u8 = new Uint8Array(bstr.length);
+    for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
+    blob = new Blob([u8], { type: match[1] || mimeType || 'application/octet-stream' });
+  } else {
+    // Remote URL — fetch the resource (may fail due to CORS)
+    let resp: Response;
+    try {
+      resp = await fetch(url);
+      if (!resp.ok) throw new Error(`Fetch returned ${resp.status}`);
+    } catch (err) {
+      // Some shared links (notably Google Drive) require a different direct-download URL
+      // Attempt common Drive URL transforms before failing to give the client a better chance.
+      const tryDriveDirect = (u: string) => {
+        const fileIdMatch = u.match(/(?:\/d\/|open\?id=|id=)([a-zA-Z0-9_-]{10,})/);
+        if (fileIdMatch) return `https://drive.google.com/uc?export=download&id=${fileIdMatch[1]}`;
+        return null;
+      };
+
+      const alt = tryDriveDirect(url);
+      if (alt) {
+        try {
+          resp = await fetch(alt);
+          if (!resp.ok) throw new Error(`Drive direct download returned ${resp.status}`);
+        } catch (err2) {
+          throw new Error(
+            `Failed to fetch file for copying (tried original URL and Drive direct link): ${String(err2)}. ` +
+              'If this is a Google Drive link ensure the file is shared publicly or use Room Drive to move the file.'
+          );
+        }
+      } else {
+        throw new Error(
+          `Failed to fetch file for copying: ${String(err)}. ` +
+            'This may be a CORS or sharing restriction. For Drive files, make them public or use Room Drive.'
+        );
+      }
+    }
+    blob = await resp.blob();
+  }
+
+  const fileObj = new File([blob], fileName, { type: mimeType || 'application/octet-stream' });
+
+  const provider = getCloudProvider(cloudSettings.provider as any);
+  const accessToken = await ensureValidToken(userId, cloudSettings);
+  const folderId = cloudSettings.folder_id || (await provider.ensureFolder(accessToken, 'Verbose'));
+
+  const result = await provider.upload(accessToken, folderId, fileObj, (pct) => {
+    onProgress?.({ percent: pct, bytesUploaded: Math.round((pct / 100) * fileObj.size), totalBytes: fileObj.size });
+  });
+
+  return result;
 }
 
 /** Can this MIME type be previewed inline in the browser? */

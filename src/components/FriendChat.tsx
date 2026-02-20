@@ -13,7 +13,8 @@ import {
   cleanOldDMSignals,
 } from '../lib/friends-chat';
 import type { DirectMessage, FileMetadata, DMSignal } from '../lib/friends-chat';
-import { formatFileSize } from '../lib/drive';
+import { formatFileSize, saveUrlToDrive } from '../lib/drive';
+import { getActiveCloudSettings } from '../lib/cloud-storage';
 import { WebRTCService } from '../lib/webrtc';
 import type { CallType, SignalAdapter } from '../lib/webrtc';
 import './FriendChat.css';
@@ -48,6 +49,8 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
   const [isSending, setIsSending] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [savingToDrive, setSavingToDrive] = useState<Record<string, boolean>>({});
+  const [savedToDrive, setSavedToDrive] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -459,6 +462,35 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
           <div className="fc-file-info-row">
             <span className="fc-file-name">{fileName}</span>
             <span className="fc-file-size">{formatFileSize(fileSize)}</span>
+            <div className="fc-file-actions">
+              <button
+                className="fc-save-drive-btn"
+                onClick={async () => {
+                  if (!user?.id) return;
+                  // Ensure cloud settings
+                  const cs = await getActiveCloudSettings(user.id).catch(() => null);
+                  if (!cs) {
+                    alert('Connect your Drive in Cloud Storage settings first.');
+                    return;
+                  }
+                  setSavingToDrive((s) => ({ ...s, [msg.id]: true }));
+                  try {
+                    await saveUrlToDrive(meta.url, user.id, fileName, meta.mimeType || null);
+                    setSavedToDrive((s) => ({ ...s, [msg.id]: true }));
+                    alert('Saved to Drive');
+                  } catch (err) {
+                    console.error('[FriendChat] Save to Drive failed:', err);
+                    alert('Failed to save to Drive: ' + (err as Error).message);
+                  } finally {
+                    setSavingToDrive((s) => ({ ...s, [msg.id]: false }));
+                  }
+                }}
+                disabled={!!savingToDrive[msg.id]}
+                title="Save to Drive"
+              >
+                {savingToDrive[msg.id] ? 'Saving…' : savedToDrive[msg.id] ? 'Saved' : 'Save to Drive'}
+              </button>
+            </div>
           </div>
         </div>
       );
