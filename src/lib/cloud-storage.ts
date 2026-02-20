@@ -80,6 +80,12 @@ class GoogleDriveProvider implements CloudProvider {
       const redirectUri = `${window.location.origin}/auth/google-drive/callback`;
       const state = crypto.randomUUID();
       sessionStorage.setItem('gdrive_oauth_state', state);
+      // Remember the opener origin so the callback can postMessage back precisely
+      try {
+        sessionStorage.setItem('gdrive_oauth_opener_origin', window.location.origin);
+      } catch (err) {
+        // sessionStorage may be unavailable in some environments — ignore
+      }
 
       const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
@@ -186,6 +192,7 @@ class GoogleDriveProvider implements CloudProvider {
         } catch (err) {
           // Ignore errors when closing the popup (COOP / blocked)
         }
+        try { sessionStorage.removeItem('gdrive_oauth_opener_origin'); } catch {}
       }
 
       // Timeout after 5 minutes

@@ -285,11 +285,13 @@ Verbose supports **user-owned cloud storage** via Google Drive. Files upload dir
 5. Select **Web application**
 6. Under **Authorized JavaScript origins**, add:
    - `http://localhost:5173` (local development)
-   - `https://your-app.vercel.app` (production Vercel URL)
+   - `https://verbose-eta.vercel.app` (production Vercel URL)
 
-7. Under **Authorized redirect URIs**, add:
+IMPORTANT: Do NOT add the Supabase auth callback (`https://your-project-ref.supabase.co/auth/v1/callback`) to this Google OAuth client. The Drive OAuth flow must use your frontend callback URL (below). If you previously added the Supabase callback, remove it from the OAuth client settings to avoid redirect_uri_mismatch errors.
+
+7. Under **Authorized redirect URIs**, add the exact frontend callback URLs your app will use:
    - `http://localhost:5173/auth/google-drive/callback`
-   - `https://your-app.vercel.app/auth/google-drive/callback`
+   - `https://verbose-eta.vercel.app/auth/google-drive/callback`
 
 8. Click **Create** and copy the **Client ID**
 

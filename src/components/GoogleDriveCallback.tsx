@@ -24,7 +24,15 @@ const GoogleDriveCallback: React.FC = () => {
       if (error) {
         const payload = { type: 'google-drive-oauth-error', error };
         if (window.opener) {
-          window.opener.postMessage(payload, window.location.origin);
+          const openerOrigin = (() => {
+            try { return sessionStorage.getItem('gdrive_oauth_opener_origin') || window.location.origin; } catch { return window.location.origin; }
+          })();
+          try {
+            window.opener.postMessage(payload, openerOrigin);
+          } catch (err) {
+            // As a last resort, post to any origin so the opener still receives the message
+            try { window.opener.postMessage(payload, '*'); } catch {}
+          }
         }
         setStatus(`Authorization failed: ${error}`);
         setTimeout(() => window.close(), 2000);
@@ -40,7 +48,14 @@ const GoogleDriveCallback: React.FC = () => {
         };
 
         if (window.opener) {
-          window.opener.postMessage(payload, window.location.origin);
+          const openerOrigin = (() => {
+            try { return sessionStorage.getItem('gdrive_oauth_opener_origin') || window.location.origin; } catch { return window.location.origin; }
+          })();
+          try {
+            window.opener.postMessage(payload, openerOrigin);
+          } catch (err) {
+            try { window.opener.postMessage(payload, '*'); } catch {}
+          }
           setStatus('Connected! This window will close…');
           setTimeout(() => window.close(), 1000);
         } else {
