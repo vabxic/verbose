@@ -7,6 +7,7 @@ import ChatRoom from './ChatRoom';
 import FriendChat from './FriendChat';
 import BackgroundHome from './background_home';
 import BackgroundCustomizer, { BACKGROUND_OPTIONS } from './BackgroundCustomizer';
+import CloudStorageSettings from './CloudStorageSettings';
 import Switch from './switch';
 import { createRoom, joinRoomByCode, sendMessage } from '../lib/rooms';
 import type { Room } from '../lib/rooms';
@@ -66,6 +67,7 @@ export const HomePage: React.FC = () => {
     return 'dark-radial';
   });
   const [showBgCustomizer, setShowBgCustomizer] = useState(false);
+  const [showCloudStorageSettings, setShowCloudStorageSettings] = useState(false);
   const [isLightTheme, setIsLightTheme] = useState(false);
   const prevUserIdRef = useRef(user?.id);
   const urlJoinAttemptedRef = useRef(false);
@@ -538,6 +540,11 @@ export const HomePage: React.FC = () => {
         />
       )}
 
+      {/* ── Cloud Storage Settings ── */}
+      {showCloudStorageSettings && (
+        <CloudStorageSettings onClose={() => setShowCloudStorageSettings(false)} />
+      )}
+
       {/* Top bar */}
       <header className="home-header">
         <div className="home-header-left">
@@ -556,6 +563,7 @@ export const HomePage: React.FC = () => {
           <button className="home-nav-link" onClick={() => setShowJoinModal(true)}>
             Join Room
           </button>
+          
         </nav>
         <div className="home-header-right">
           {/* Theme toggle switch */}
@@ -571,6 +579,25 @@ export const HomePage: React.FC = () => {
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
+          </button>
+          {/* Drive icon (mobile) — black for light theme, white for dark theme */}
+          <button
+            className="home-header-icon-btn"
+            aria-label="Drive"
+            title="Connect to Drive"
+            onClick={() => setShowCloudStorageSettings(true)}
+          >
+            {isLightTheme ? (
+              // black SVG (scaled down)
+              <svg viewBox="0 0 58.21 58.21" width="18" height="18" fill="#000000" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.077,25.553c0.021-0.304,0.03-0.604,0.03-0.897c0-8.459-6.882-15.341-15.34-15.341 c-6.084,0-11.598,3.611-14.032,9.174c-0.029,0.042-0.123,0.106-0.161,0.117c-3.776,0.395-7.116,2.797-8.713,6.266 c-0.046,0.088-0.227,0.236-0.316,0.263C3.925,26.369,0,31.231,0,36.96c0,6.692,5.341,11.935,12.159,11.935h34.448 c6.397,0,11.603-5.307,11.603-11.83C58.21,31.164,53.783,26.278,48.077,25.553z M46.607,45.894H12.159 C7.023,45.894,3,41.97,3,36.959c0-4.308,2.956-7.966,7.187-8.895c1.001-0.219,1.964-0.996,2.397-1.935 c1.158-2.515,3.573-4.255,6.302-4.54c1.089-0.113,2.151-0.883,2.585-1.873c1.97-4.497,6.403-7.402,11.297-7.402 c6.805,0,12.34,5.536,12.34,12.341c0,0.378-0.021,0.773-0.064,1.176c-0.102,0.951-0.169,1.579,0.334,2.137 c0.284,0.316,0.699,0.501,1.124,0.501c0.028-0.014,0.108-0.004,0.162-0.01c4.718,0.031,8.547,3.878,8.547,8.603 C55.21,41.85,51.27,45.894,46.607,45.894z" />
+              </svg>
+            ) : (
+              // white SVG (scaled down)
+              <svg viewBox="0 0 58.21 58.21" width="18" height="18" fill="#ffffff" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.077,25.553c0.021-0.304,0.03-0.604,0.03-0.897c0-8.459-6.882-15.341-15.34-15.341 c-6.084,0-11.598,3.611-14.032,9.174c-0.029,0.042-0.123,0.106-0.161,0.117c-3.776,0.395-7.116,2.797-8.713,6.266 c-0.046,0.088-0.227,0.236-0.316,0.263C3.925,26.369,0,31.231,0,36.96c0,6.692,5.341,11.935,12.159,11.935h34.448 c6.397,0,11.603-5.307,11.603-11.83C58.21,31.164,53.783,26.278,48.077,25.553z M46.607,45.894H12.159 C7.023,45.894,3,41.97,3,36.959c0-4.308,2.956-7.966,7.187-8.895c1.001-0.219,1.964-0.996,2.397-1.935 c1.158-2.515,3.573-4.255,6.302-4.54c1.089-0.113,2.151-0.883,2.585-1.873c1.97-4.497,6.403-7.402,11.297-7.402 c6.805,0,12.34,5.536,12.34,12.341c0,0.378-0.021,0.773-0.064,1.176c-0.102,0.951-0.169,1.579,0.334,2.137 c0.284,0.316,0.699,0.501,1.124,0.501c0.028-0.014,0.108-0.004,0.162-0.01c4.718,0.031,8.547,3.878,8.547,8.603 C55.21,41.85,51.27,45.894,46.607,45.894z" />
+              </svg>
+            )}
           </button>
           <ProfileAvatar />
         </div>

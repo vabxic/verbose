@@ -285,3 +285,132 @@
     text-align: center;
   }
 }
+
+/* ── Light theme overrides (when parent page uses .home-page.light-theme) ── */
+.home-page.light-theme .cloud-settings-overlay {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.home-page.light-theme .cloud-settings-panel {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: #111;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.home-page.light-theme .cloud-settings-header-left {
+  color: rgba(0,0,0,0.85);
+}
+
+.home-page.light-theme .cloud-settings-desc,
+.home-page.light-theme .cloud-settings-info li,
+.home-page.light-theme .cloud-settings-loading {
+  color: rgba(0,0,0,0.65);
+}
+
+.home-page.light-theme .cloud-settings-desc strong,
+.home-page.light-theme .cloud-settings-info li em {
+  color: #0a66ff;
+}
+
+.home-page.light-theme .cloud-settings-provider-card,
+.home-page.light-theme .cloud-settings-provider-btn,
+.home-page.light-theme .cloud-settings-info {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.06);
+}
+
+.home-page.light-theme .cloud-settings-provider-name {
+  color: #0a0a0a;
+}
+
+.home-page.light-theme .cloud-settings-provider-email,
+.home-page.light-theme .cloud-settings-provider-folder,
+.home-page.light-theme .cloud-settings-token-status {
+  color: rgba(0,0,0,0.55);
+}
+
+.home-page.light-theme .cloud-settings-disconnect-btn {
+  background: rgba(255, 80, 80, 0.06);
+  border-color: rgba(255, 80, 80, 0.12);
+  color: #a00;
+}
+
+.home-page.light-theme .cloud-settings-provider-btn:hover:not(:disabled) {
+  background: rgba(10, 102, 255, 0.06);
+  border-color: rgba(10, 102, 255, 0.18);
+}
+
+/* Also support when a generic .light-theme class or body.light-theme is present
+   (some parts of the app may set theme at higher level) */
+.light-theme .cloud-settings-overlay,
+body.light-theme .cloud-settings-overlay {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.light-theme .cloud-settings-panel,
+body.light-theme .cloud-settings-panel {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: #111;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.light-theme .cloud-settings-header-left,
+body.light-theme .cloud-settings-header-left {
+  color: rgba(0,0,0,0.85);
+}
+
+.light-theme .cloud-settings-desc,
+body.light-theme .cloud-settings-desc,
+.light-theme .cloud-settings-info li,
+body.light-theme .cloud-settings-info li,
+.light-theme .cloud-settings-loading,
+body.light-theme .cloud-settings-loading {
+  color: rgba(0,0,0,0.65);
+}
+
+.light-theme .cloud-settings-desc strong,
+body.light-theme .cloud-settings-desc strong,
+.light-theme .cloud-settings-info li em,
+body.light-theme .cloud-settings-info li em {
+  color: #0a66ff;
+}
+
+.light-theme .cloud-settings-provider-card,
+body.light-theme .cloud-settings-provider-card,
+.light-theme .cloud-settings-provider-btn,
+body.light-theme .cloud-settings-provider-btn,
+.light-theme .cloud-settings-info,
+body.light-theme .cloud-settings-info {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.06);
+}
+
+.light-theme .cloud-settings-provider-name,
+body.light-theme .cloud-settings-provider-name {
+  color: #0a0a0a;
+}
+
+.light-theme .cloud-settings-provider-email,
+body.light-theme .cloud-settings-provider-email,
+.light-theme .cloud-settings-provider-folder,
+body.light-theme .cloud-settings-provider-folder,
+.light-theme .cloud-settings-token-status,
+body.light-theme .cloud-settings-token-status {
+  color: rgba(0,0,0,0.55);
+}
+
+.light-theme .cloud-settings-disconnect-btn,
+body.light-theme .cloud-settings-disconnect-btn {
+  background: rgba(255, 80, 80, 0.06);
+  border-color: rgba(255, 80, 80, 0.12);
+  color: #a00;
+}
+
+.light-theme .cloud-settings-provider-btn:hover:not(:disabled),
+body.light-theme .cloud-settings-provider-btn:hover:not(:disabled) {
+  background: rgba(10, 102, 255, 0.06);
+  border-color: rgba(10, 102, 255, 0.18);
+}
+

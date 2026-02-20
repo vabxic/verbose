@@ -23,6 +23,11 @@ interface RoomDriveProps {
   onClose: () => void;
 }
 
+interface ErrorInfo {
+  message: string;
+  suggestion?: string;
+}
+
 const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
   const { user } = useAuth();
   const [files, setFiles] = useState<RoomFile[]>([]);
@@ -30,7 +35,7 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorInfo | null>(null);
   const [previewFile, setPreviewFile] = useState<RoomFile | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -45,6 +50,35 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
     user?.user_metadata?.username ||
     user?.email?.split('@')[0] ||
     'Guest';
+
+  // ── Helper to parse errors and add suggestions ──
+  const createErrorInfo = (errorMessage: string): ErrorInfo => {
+    if (errorMessage.includes('storage quota')) {
+      return {
+        message: errorMessage,
+        suggestion: 'Free up space in your Google Drive or upgrade your Google One storage plan.',
+      };
+    }
+    if (errorMessage.includes('permission')) {
+      return {
+        message: errorMessage,
+        suggestion: 'Check that you have permission to upload files to this location.',
+      };
+    }
+    if (errorMessage.includes('expired') || errorMessage.includes('session')) {
+      return {
+        message: errorMessage,
+        suggestion: 'Please reconnect your Google Drive account in cloud storage settings.',
+      };
+    }
+    if (errorMessage.includes('network|connection')) {
+      return {
+        message: errorMessage,
+        suggestion: 'Check your internet connection and try again.',
+      };
+    }
+    return { message: errorMessage };
+  };
 
   // ── Load initial files ─────────────────
   useEffect(() => {
@@ -80,7 +114,7 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       // 3 GB limit
       const MAX_SIZE = 3 * 1024 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
-        setError('File exceeds the 3 GB limit.');
+        setError(createErrorInfo('File exceeds the 3 GB limit.'));
         return;
       }
 
@@ -94,7 +128,8 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
         );
       } catch (err) {
         console.error('[RoomDrive] Upload error:', err);
-        setError((err as Error).message || 'Upload failed');
+        const errorMsg = (err as Error).message || 'Upload failed';
+        setError(createErrorInfo(errorMsg));
       } finally {
         setUploading(false);
         setUploadProgress(null);
@@ -155,7 +190,7 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       }
     } catch (err) {
       console.error('[RoomDrive] View error:', err);
-      setError('Failed to get preview link');
+      setError(createErrorInfo('Failed to get preview link'));
     }
   };
 
@@ -172,7 +207,7 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       document.body.removeChild(a);
     } catch (err) {
       console.error('[RoomDrive] Download error:', err);
-      setError('Failed to get download link');
+      setError(createErrorInfo('Failed to get download link'));
     }
   };
 
@@ -190,7 +225,8 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       setSavedToDrive((prev) => ({ ...prev, [file.id]: true }));
     } catch (err) {
       console.error('[RoomDrive] Save to Drive error:', err);
-      setError((err as Error).message || 'Failed to save to Drive');
+      const errorMsg = (err as Error).message || 'Failed to save to Drive';
+      setError(createErrorInfo(errorMsg));
     } finally {
       setSavingToDrive((prev) => ({ ...prev, [file.id]: false }));
     }
@@ -203,7 +239,7 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       await deleteRoomFile(file);
     } catch (err) {
       console.error('[RoomDrive] Delete error:', err);
-      setError('Failed to delete file');
+      setError(createErrorInfo('Failed to delete file'));
     }
   };
 
@@ -342,7 +378,12 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       {/* Error */}
       {error && (
         <div className="room-drive-error">
-          <span>{error}</span>
+          <div className="room-drive-error-content">
+            <span className="room-drive-error-message">{error.message}</span>
+            {error.suggestion && (
+              <span className="room-drive-error-suggestion">{error.suggestion}</span>
+            )}
+          </div>
           <button onClick={() => setError(null)}>✕</button>
         </div>
       )}

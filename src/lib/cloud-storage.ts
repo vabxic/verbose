@@ -60,6 +60,72 @@ export interface CloudProvider {
 }
 
 // ═══════════════════════════════════════════════════
+// Error Parsing & Messages
+// ═══════════════════════════════════════════════════
+
+export interface DriveErrorDetails {
+  statusCode: number;
+  errorCode?: string;
+  reason?: string;
+  message: string;
+  userMessage: string;
+}
+
+/**
+ * Parses Google Drive API error responses and provides user-friendly messages
+ */
+export function parseDriveError(statusCode: number, responseText: string): DriveErrorDetails {
+  const details: DriveErrorDetails = {
+    statusCode,
+    message: '',
+    userMessage: '',
+  };
+
+  try {
+    const data = JSON.parse(responseText);
+    
+    if (data.error) {
+      if (typeof data.error === 'string') {
+        details.message = data.error;
+      } else {
+        details.message = data.error.message || '';
+        details.errorCode = data.error.code;
+      }
+    }
+
+    // Extract specific error reason from nested structure
+    if (data.error?.errors?.[0]) {
+      details.reason = data.error.errors[0].reason;
+    }
+  } catch {
+    details.message = responseText;
+  }
+
+  // Generate user-friendly messages based on error type
+  if (statusCode === 403) {
+    if (details.reason === 'storageQuotaExceeded' || details.message.includes('storage quota')) {
+      details.userMessage = 'Your Google Drive storage quota has been exceeded. Please free up space or upgrade your Google One plan.';
+    } else if (details.message.includes('permission')) {
+      details.userMessage = 'You don\'t have permission to upload to this folder. Check your Google Drive permissions.';
+    } else {
+      details.userMessage = 'Google Drive access denied. Please check your connection and permissions.';
+    }
+  } else if (statusCode === 401) {
+    details.userMessage = 'Your Google Drive session has expired. Please reconnect in cloud storage settings.';
+  } else if (statusCode === 404) {
+    details.userMessage = 'The folder or file cannot be found on Google Drive. Please reconnect.';
+  } else if (statusCode === 429) {
+    details.userMessage = 'Too many requests. Please wait a moment and try again.';
+  } else if (statusCode >= 500) {
+    details.userMessage = 'Google Drive service is temporarily unavailable. Please try again later.';
+  } else {
+    details.userMessage = `Upload failed (${statusCode}). Please try again.`;
+  }
+
+  return details;
+}
+
+// ═══════════════════════════════════════════════════
 // Google Drive Provider
 // ═══════════════════════════════════════════════════
 
@@ -213,8 +279,9 @@ class GoogleDriveProvider implements CloudProvider {
     );
     if (!searchResp.ok) {
       const body = await searchResp.text();
-      console.warn('[CloudStorage] Drive folder search failed', { status: searchResp.status, body });
-      throw new Error(`Drive folder search failed: ${searchResp.status} ${body}`);
+      const errorDetails = parseDriveError(searchResp.status, body);
+      console.warn('[CloudStorage] Drive folder search failed', errorDetails);
+      throw new Error(errorDetails.userMessage);
     }
     const searchData = await searchResp.json();
 
@@ -236,8 +303,9 @@ class GoogleDriveProvider implements CloudProvider {
     });
     if (!createResp.ok) {
       const body = await createResp.text();
-      console.warn('[CloudStorage] Drive folder create failed', { status: createResp.status, body });
-      throw new Error(`Drive folder create failed: ${createResp.status} ${body}`);
+      const errorDetails = parseDriveError(createResp.status, body);
+      console.warn('[CloudStorage] Drive folder create failed', errorDetails);
+      throw new Error(errorDetails.userMessage);
     }
     const folder = await createResp.json();
     return folder.id;
@@ -328,8 +396,9 @@ class GoogleDriveProvider implements CloudProvider {
 
     if (!resp.ok) {
       const text = await resp.text();
-      console.warn('[CloudStorage] Google Drive multipart upload failed', { status: resp.status, body: text });
-      throw new Error(`Google Drive upload failed: ${resp.status} ${text}`);
+      const errorDetails = parseDriveError(resp.status, text);
+      console.warn('[CloudStorage] Google Drive multipart upload failed', errorDetails);
+      throw new Error(errorDetails.userMessage);
     }
 
     const data = await resp.json();
@@ -364,8 +433,9 @@ class GoogleDriveProvider implements CloudProvider {
 
     if (!initResp.ok) {
       const body = await initResp.text();
-      console.warn('[CloudStorage] Resumable upload init failed', { status: initResp.status, body });
-      throw new Error(`Resumable upload init failed: ${initResp.status} ${body}`);
+      const errorDetails = parseDriveError(initResp.status, body);
+      console.warn('[CloudStorage] Resumable upload init failed', errorDetails);
+      throw new Error(errorDetails.userMessage);
     }
 
     const uploadUri = initResp.headers.get('Location');
@@ -396,7 +466,9 @@ class GoogleDriveProvider implements CloudProvider {
             reject(new Error('Failed to parse upload response'));
           }
         } else {
-          reject(new Error(`Upload chunk failed: ${xhr.status} ${xhr.responseText}`));
+          const errorDetails = parseDriveError(xhr.status, xhr.responseText);
+          console.warn('[CloudStorage] Upload chunk failed', errorDetails);
+          reject(new Error(errorDetails.userMessage));
         }
       });
 
@@ -426,9 +498,10 @@ class GoogleDriveProvider implements CloudProvider {
 
     if (!resp.ok) {
       const body = await resp.text();
-      console.warn('[CloudStorage] Could not share file', { fileId, status: resp.status, body });
-      // Keep silent for users but throw to bubble up in dev flows
-      throw new Error(`Drive share failed: ${resp.status} ${body}`);
+      const errorDetails = parseDriveError(resp.status, body);
+      console.warn('[CloudStorage] Could not share file', { fileId, ...errorDetails });
+      // Still throw to bubble up, but with user-friendly message
+      throw new Error(errorDetails.userMessage);
     }
   }
 
