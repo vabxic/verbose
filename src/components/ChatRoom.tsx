@@ -410,39 +410,59 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   const handleLeave = async () => {
     if (inCall) await hangUp();
     if (user?.id) {
-      try {
-        await sendMessage(room.id, user.id, displayName, `${displayName} left the room`, 'system');
-      } catch {
-        // Best-effort
-      }
-      await leaveRoom(room.id, user.id);
-
-      // If the current user is the host (creator), handle host transfer or room closure
-      if (user.id === room.created_by) {
+      // Fire-and-forget the system 'left' message so we don't block the UI.
+      const leftMsgPromise = (async () => {
         try {
-          const { supabase } = await import('../lib/supabase');
-          const remaining = await getRoomParticipants(room.id);
+          await sendMessage(room.id, user.id, displayName, `${displayName} left the room`, 'system');
+        } catch {
+          // Best-effort
+        }
+      })();
 
-          if (remaining.length > 0) {
-            // Transfer host to a random remaining participant
-            const newHost = remaining[Math.floor(Math.random() * remaining.length)];
-            await supabase.from('rooms').update({ created_by: newHost.user_id }).eq('id', room.id);
-            await sendMessage(
-              room.id,
-              'system',
-              'System',
-              `${newHost.display_name || 'A participant'} is now the host`,
-              'system',
-            );
-          } else {
-            // No one left — deactivate room and delete all storage
-            await supabase.from('rooms').update({ is_active: false }).eq('id', room.id);
-            await deleteAllRoomFiles(room.id);
+      // Ensure we remove the participant before navigating away, but avoid
+      // waiting for potentially long host-transfer or storage cleanup tasks.
+      try {
+        await leaveRoom(room.id, user.id);
+      } catch (err) {
+        console.warn('[ChatRoom] Error leaving room:', err);
+      }
+
+      // Handle host transfer / room closure in background without blocking the UI.
+      (async () => {
+        try {
+          // Wait for the left message to be sent (best-effort), but don't block leave.
+          await leftMsgPromise;
+
+          if (user.id === room.created_by) {
+            try {
+              const { supabase } = await import('../lib/supabase');
+              const remaining = await getRoomParticipants(room.id);
+
+              if (remaining.length > 0) {
+                // Transfer host to a random remaining participant
+                const newHost = remaining[Math.floor(Math.random() * remaining.length)];
+                await supabase.from('rooms').update({ created_by: newHost.user_id }).eq('id', room.id);
+                await sendMessage(
+                  room.id,
+                  'system',
+                  'System',
+                  `${newHost.display_name || 'A participant'} is now the host`,
+                  'system',
+                );
+              } else {
+                // No one left — deactivate room and delete all storage
+                await supabase.from('rooms').update({ is_active: false }).eq('id', room.id);
+                await deleteAllRoomFiles(room.id);
+              }
+            } catch (err) {
+              console.warn('[ChatRoom] Could not handle host transfer / room closure:', err);
+            }
           }
         } catch (err) {
-          console.warn('[ChatRoom] Could not handle host transfer / room closure:', err);
+          // Background errors should not affect user flow
+          console.warn('[ChatRoom] Background cleanup failed:', err);
         }
-      }
+      })();
     }
     onLeave();
   };
@@ -573,6 +593,21 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
     if (!fileList || fileList.length === 0 || !user?.id) return;
     const file = fileList[0];
     const MAX_SIZE = 3 * 1024 * 1024 * 1024; // 3 GB
+    const ROOM_DRIVE_RECOMMEND_THRESHOLD = 50 * 1024 * 1024; // 50 MB
+
+    // If file is large, prompt the user to upload via the Room Drive instead
+    if (file.size > ROOM_DRIVE_RECOMMEND_THRESHOLD) {
+      const openDrive = window.confirm(
+        'This file is larger than 50 MB. For large files we recommend using the Room Drive to avoid storage limits. Open Room Drive now?'
+      );
+      if (openDrive) {
+        setShowDrive(true);
+        // clear file input selection
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+      // If the user chose not to open the Drive, continue with the upload as before
+    }
     if (file.size > MAX_SIZE) {
       alert('File exceeds the 3 GB limit.');
       return;

@@ -79,9 +79,94 @@ export async function uploadRoomFile(
   file: File,
   onProgress?: (p: UploadProgress) => void,
 ): Promise<RoomFile> {
-  // Always use Supabase Storage — files belong to the room, not the sender's Drive.
-  // Each recipient can optionally copy the file to their own Drive.
+  const DRIVE_THRESHOLD = 50 * 1024 * 1024; // 50 MB
+
+  // For large files, prefer uploading directly to the sender's connected cloud Drive
+  // so the file does not consume Supabase storage. If the sender has no cloud
+  // provider connected, fall back to Supabase Storage.
+  if (file.size > DRIVE_THRESHOLD) {
+    try {
+      return await uploadToDrive(roomId, uploaderId, uploaderName, file, onProgress);
+    } catch (err) {
+      // If drive upload fails for any reason, log and fall back to Supabase
+      console.warn('[drive] Drive upload failed, falling back to Supabase:', err);
+      return uploadToSupabase(roomId, uploaderId, uploaderName, file, onProgress);
+    }
+  }
+
+  // Small files -> Supabase Storage as before
   return uploadToSupabase(roomId, uploaderId, uploaderName, file, onProgress);
+}
+
+/** Upload a file directly to the sender's connected cloud Drive and record it in DB. */
+async function uploadToDrive(
+  roomId: string,
+  uploaderId: string,
+  uploaderName: string,
+  file: File,
+  onProgress?: (p: UploadProgress) => void,
+): Promise<RoomFile> {
+  const cloudSettings = await getActiveCloudSettings(uploaderId);
+  if (!cloudSettings) {
+    throw new Error('No cloud storage connected for this user.');
+  }
+
+  // 1. Insert metadata row (status = uploading)
+  const { data: meta, error: metaErr } = await supabase
+    .from('room_files')
+    .insert({
+      room_id: roomId,
+      uploader_id: uploaderId,
+      uploader_name: uploaderName,
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type || 'application/octet-stream',
+      storage_path: '',
+      status: 'uploading',
+      cloud_provider: cloudSettings.provider,
+      cloud_file_id: null,
+      cloud_share_url: null,
+    })
+    .select()
+    .single();
+
+  if (metaErr) throw metaErr;
+
+  try {
+    const provider = getCloudProvider(cloudSettings.provider as any);
+    const accessToken = await ensureValidToken(uploaderId, cloudSettings);
+    const folderId = cloudSettings.folder_id || (await provider.ensureFolder(accessToken, 'Verbose'));
+
+    const result = await provider.upload(accessToken, folderId, file, (pct) => {
+      onProgress?.({ percent: pct, bytesUploaded: Math.round((pct / 100) * file.size), totalBytes: file.size });
+    });
+
+    // 3. Update row with cloud info and mark ready
+    const { data: updated, error: updateErr } = await supabase
+      .from('room_files')
+      .update({
+        status: 'ready',
+        cloud_provider: result.provider,
+        cloud_file_id: result.fileId,
+        cloud_share_url: result.shareUrl,
+        storage_path: '',
+      })
+      .eq('id', (meta as any).id)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+    return updated as RoomFile;
+  } catch (err) {
+    // Mark failed
+    try {
+      await supabase
+        .from('room_files')
+        .update({ status: 'failed' })
+        .eq('id', (meta as any).id);
+    } catch {}
+    throw err;
+  }
 }
 
 /**
@@ -169,12 +254,58 @@ async function uploadToSupabase(
 
     if (updateErr) throw updateErr;
     return updated as RoomFile;
-  } catch (err) {
-    // Mark failed
-    await supabase
-      .from('room_files')
-      .update({ status: 'failed' })
-      .eq('id', meta.id);
+  } catch (err: any) {
+    // If Supabase rejects due to object size limits, try fallback: upload to user's Drive
+    const msg = String(err?.message || err || '');
+    const isPayloadTooLarge = msg.includes('413') || msg.toLowerCase().includes('payload too large') || msg.toLowerCase().includes('exceeded the maximum');
+
+    if (isPayloadTooLarge) {
+      try {
+        const cloudSettings = await getActiveCloudSettings(uploaderId);
+        if (cloudSettings) {
+          const provider = getCloudProvider(cloudSettings.provider as any);
+          const accessToken = await ensureValidToken(uploaderId, cloudSettings);
+          const folderId = cloudSettings.folder_id || (await provider.ensureFolder(accessToken, 'Verbose'));
+
+          const result = await provider.upload(accessToken, folderId, file, (pct) => {
+            onProgress?.({ percent: pct, bytesUploaded: Math.round((pct / 100) * file.size), totalBytes: file.size });
+          });
+
+          // Update existing metadata row with cloud info and mark ready
+          const { data: updated, error: updateErr } = await supabase
+            .from('room_files')
+            .update({
+              status: 'ready',
+              cloud_provider: result.provider,
+              cloud_file_id: result.fileId,
+              cloud_share_url: result.shareUrl,
+              storage_path: '',
+            })
+            .eq('id', meta.id)
+            .select()
+            .single();
+
+          if (updateErr) {
+            // If updating the row fails, mark failed below
+            throw updateErr;
+          }
+
+          return updated as RoomFile;
+        }
+      } catch (driveErr) {
+        console.warn('[drive] Fallback to Drive failed:', driveErr);
+        // proceed to mark failed and rethrow original err
+      }
+    }
+
+    // Mark failed (original behavior)
+    try {
+      await supabase
+        .from('room_files')
+        .update({ status: 'failed' })
+        .eq('id', meta.id);
+    } catch {}
+
     throw err;
   }
 }

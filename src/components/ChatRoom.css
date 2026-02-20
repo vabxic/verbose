@@ -1787,6 +1787,26 @@ body.light-theme .chatroom-back-btn svg {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* Mobile: make media previews smaller for phones */
+@media (max-width: 600px) {
+  .chatroom-file-preview {
+    max-width: 220px;
+    gap: 0.3rem;
+  }
+
+  .chatroom-file-image,
+  .chatroom-file-video {
+    max-height: 140px;
+    border-radius: 10px;
+  }
+
+  /* Shrink the local preview PiP on small screens */
+  .chatroom-local-video {
+    width: 120px;
+    max-height: 140px;
+  }
+}
+
 .chatroom-file-info {
   display: flex;
   align-items: center;

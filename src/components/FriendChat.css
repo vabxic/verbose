@@ -277,6 +277,26 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+/* Mobile: make media previews smaller for phones */
+@media (max-width: 600px) {
+  .fc-file-preview {
+    max-width: 220px;
+    gap: 0.3rem;
+  }
+
+  .fc-file-image,
+  .fc-file-video {
+    max-height: 140px;
+    border-radius: 10px;
+  }
+
+  /* Shrink local PiP in friend chat on small screens */
+  .fc-local-video {
+    width: 120px;
+    max-height: 140px;
+  }
+}
+
 .fc-file-info-row {
   display: flex;
   align-items: center;

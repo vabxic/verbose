@@ -149,8 +149,12 @@ export const HomePage: React.FC = () => {
   // ── Sync background from localStorage and listen for cross-tab updates ──
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const storedBgId = localStorage.getItem('chatroom-bg-id') || 'dark-radial';
-    if (storedBgId !== selectedBgId) {
+    const storedBgId = localStorage.getItem('chatroom-bg-id');
+    if (!storedBgId) {
+      // Ensure home screen defaults to dark-radial when no preference exists
+      localStorage.setItem('chatroom-bg-id', 'dark-radial');
+      if (selectedBgId !== 'dark-radial') setSelectedBgId('dark-radial');
+    } else if (storedBgId !== selectedBgId) {
       setSelectedBgId(storedBgId);
     }
 
