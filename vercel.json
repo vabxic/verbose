@@ -4,8 +4,15 @@
   "installCommand": "pnpm install",
   "framework": "vite",
   "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "env": {
     "VITE_SUPABASE_URL": "https://qlyppnnmrmocfhpnskpn.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "sb_publishable_6k9muxudF_CUK9Dq09yMoQ_-2JPoqvN"
+    
   }
 }
