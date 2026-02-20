@@ -486,21 +486,47 @@ export async function saveUrlToDrive(
       };
 
       const alt = tryDriveDirect(url);
+
+      // Helper to try the server-side proxy (if running on a deployed host with /api/fetch-file)
+      const tryProxyFetch = async (u: string) => {
+        try {
+          if (typeof window === 'undefined') return null;
+          const proxy = `${window.location.origin}/api/fetch-file?url=${encodeURIComponent(u)}`;
+          const r = await fetch(proxy);
+          if (!r.ok) throw new Error(`Proxy returned ${r.status}`);
+          return r;
+        } catch {
+          return null;
+        }
+      };
+
       if (alt) {
         try {
           resp = await fetch(alt);
           if (!resp.ok) throw new Error(`Drive direct download returned ${resp.status}`);
         } catch (err2) {
-          throw new Error(
-            `Failed to fetch file for copying (tried original URL and Drive direct link): ${String(err2)}. ` +
-              'If this is a Google Drive link ensure the file is shared publicly or use Room Drive to move the file.'
-          );
+          // Try server proxy as a last resort (handles CORS by fetching server-side)
+          const proxied = await tryProxyFetch(url) ?? (await tryProxyFetch(alt));
+          if (proxied) {
+            resp = proxied;
+          } else {
+            throw new Error(
+              `Failed to fetch file for copying (tried original URL and Drive direct link): ${String(err2)}. ` +
+                'If this is a Google Drive link ensure the file is shared publicly or use Room Drive to move the file.'
+            );
+          }
         }
       } else {
-        throw new Error(
-          `Failed to fetch file for copying: ${String(err)}. ` +
-            'This may be a CORS or sharing restriction. For Drive files, make them public or use Room Drive.'
-        );
+        // No Drive-style alt; try server proxy before failing
+        const proxied = await tryProxyFetch(url);
+        if (proxied) {
+          resp = proxied;
+        } else {
+          throw new Error(
+            `Failed to fetch file for copying: ${String(err)}. ` +
+              'This may be a CORS or sharing restriction. For Drive files, make them public or use Room Drive.'
+          );
+        }
       }
     }
     blob = await resp.blob();
