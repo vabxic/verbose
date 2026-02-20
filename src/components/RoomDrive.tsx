@@ -11,6 +11,7 @@ import {
   isPreviewable,
   formatFileSize,
   fileCategory,
+  SaveToDriveFetchError,
 } from '../lib/drive';
 import type { RoomFile, UploadProgress } from '../lib/drive';
 import { getActiveCloudSettings } from '../lib/cloud-storage';
@@ -229,12 +230,16 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
       console.error('[RoomDrive] Save to Drive error:', err);
       const errorMsg = (err as Error).message || 'Failed to save to Drive';
       setError(createErrorInfo(errorMsg));
-      // Provide direct-download link in modal so user can still download the file
-      try {
-        const downloadUrl = await getFileUrl(file);
-        setSaveHelp({ open: true, downloadUrl, fileName: file.file_name });
-      } catch (e) {
-        setSaveHelp({ open: true, downloadUrl: null, fileName: file.file_name });
+      // If the library provided a downloadUrl with the fetch error, use it; otherwise try to build one.
+      if (err instanceof SaveToDriveFetchError && err.downloadUrl) {
+        setSaveHelp({ open: true, downloadUrl: err.downloadUrl, fileName: file.file_name });
+      } else {
+        try {
+          const downloadUrl = await getFileUrl(file);
+          setSaveHelp({ open: true, downloadUrl, fileName: file.file_name });
+        } catch (e) {
+          setSaveHelp({ open: true, downloadUrl: null, fileName: file.file_name });
+        }
       }
     } finally {
       setSavingToDrive((prev) => ({ ...prev, [file.id]: false }));

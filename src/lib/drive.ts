@@ -28,6 +28,15 @@ const BUCKET = 'room-files';
 
 // ── Helpers ─────────────────────────────────────
 
+export class SaveToDriveFetchError extends Error {
+  downloadUrl?: string | null;
+  constructor(message: string, downloadUrl?: string | null) {
+    super(message);
+    this.name = 'SaveToDriveFetchError';
+    this.downloadUrl = downloadUrl ?? null;
+  }
+}
+
 /** Human-readable file size */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -213,17 +222,23 @@ export async function saveFileToDrive(
       // Typical causes: network error or CORS blocking.
       const msg = String(err?.message || err || 'Failed to fetch');
       if (err instanceof TypeError || msg.toLowerCase().includes('failed to fetch')) {
-        throw new Error(
-          'Failed to fetch file. This is often caused by CORS or the file not being publicly accessible. Try opening the Room Drive and downloading manually, or ask the sender to make the file public.'
+        throw new SaveToDriveFetchError(
+          'Failed to fetch file. This is often caused by CORS or the file not being publicly accessible. Try opening the Room Drive and downloading manually, or ask the sender to make the file public.',
+          downloadUrl,
         );
       }
-      throw new Error(`Failed to fetch file: ${msg}`);
+      throw new SaveToDriveFetchError(`Failed to fetch file: ${msg}`, downloadUrl);
     }
   }
 
   if (!response || !response.ok) {
     const status = response ? response.status : 'network-error';
-    throw new Error(`Failed to fetch file: ${status}`);
+    try {
+      const downloadUrl = await getFileUrl(file);
+      throw new SaveToDriveFetchError(`Failed to fetch file: ${status}`, downloadUrl);
+    } catch {
+      throw new SaveToDriveFetchError(`Failed to fetch file: ${status}`, null);
+    }
   }
   const blob = await response.blob();
   const fileObj = new File([blob], file.file_name, {
