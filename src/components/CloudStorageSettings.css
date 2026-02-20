@@ -387,6 +387,18 @@ body.light-theme .cloud-settings-info {
   border-color: rgba(0,0,0,0.06);
 }
 
+/* Ensure provider buttons show black text/icons in light theme */
+.light-theme .cloud-settings-provider-btn,
+body.light-theme .cloud-settings-provider-btn {
+  color: #000000;
+}
+
+.light-theme .cloud-settings-provider-btn svg,
+body.light-theme .cloud-settings-provider-btn svg {
+  color: #000000;
+  fill: #000000;
+}
+
 .light-theme .cloud-settings-provider-name,
 body.light-theme .cloud-settings-provider-name {
   color: #0a0a0a;
@@ -413,4 +425,37 @@ body.light-theme .cloud-settings-provider-btn:hover:not(:disabled) {
   background: rgba(10, 102, 255, 0.06);
   border-color: rgba(10, 102, 255, 0.18);
 }
+
+/* Close button in cloud settings should be dark in light theme */
+.light-theme .cloud-settings-close,
+body.light-theme .cloud-settings-close {
+  color: #000000;
+  background: rgba(0,0,0,0.02);
+}
+
+.light-theme .cloud-settings-close:hover,
+body.light-theme .cloud-settings-close:hover {
+  color: #000000;
+  background: rgba(0,0,0,0.04);
+}
+
+/* Ensure provider icons are dark/black in light theme */
+.light-theme .cloud-settings-provider-icon,
+body.light-theme .cloud-settings-provider-icon {
+  background: rgba(0,0,0,0.02);
+}
+
+.light-theme .cloud-settings-provider-icon svg,
+body.light-theme .cloud-settings-provider-icon svg {
+  fill: #000000;
+  color: #000000;
+}
+
+/* For provider buttons (unconnected), make icon color dark in light theme */
+.light-theme .cloud-settings-provider-btn svg,
+body.light-theme .cloud-settings-provider-btn svg {
+  fill: #000000;
+  color: #000000;
+}
+
 

@@ -128,6 +128,17 @@ export const HomePage: React.FC = () => {
     }
   };
 
+  // Keep a body-level class in sync so other components (ChatRoom, RoomDrive)
+  // can style themselves according to the selected theme.
+  useEffect(() => {
+    try {
+      if (isLightTheme) document.body.classList.add('light-theme');
+      else document.body.classList.remove('light-theme');
+    } catch (e) {
+      // ignore (server-side or strict environments)
+    }
+  }, [isLightTheme]);
+
   const displayName = isAnonymous
     ? 'Guest'
     : user?.user_metadata?.full_name ||

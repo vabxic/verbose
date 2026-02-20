@@ -581,3 +581,74 @@
   width: min(400px, 85vw);
   outline: none;
 }
+
+/* Light theme overrides */
+.light-theme .room-drive-panel,
+.room-drive-panel.light-theme {
+  background: #ffffff;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  color: #111111;
+}
+
+.light-theme .room-drive-header,
+.room-drive-panel.light-theme .room-drive-header {
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.light-theme .room-drive-title,
+.room-drive-panel.light-theme .room-drive-title {
+  color: #0b1220;
+}
+
+.light-theme .room-drive-count,
+.room-drive-panel.light-theme .room-drive-count,
+.light-theme .room-drive-file-meta,
+.room-drive-panel.light-theme .room-drive-file-meta {
+  color: rgba(0,0,0,0.5);
+}
+
+.light-theme .room-drive-cloud-status,
+.room-drive-panel.light-theme .room-drive-cloud-status {
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: rgba(0,0,0,0.7);
+}
+
+.light-theme .room-drive-upload-label,
+.room-drive-panel.light-theme .room-drive-upload-label {
+  background: rgba(245,245,245,0.9);
+  border: 2px dashed rgba(0,0,0,0.06);
+  color: rgba(0,0,0,0.7);
+}
+
+.light-theme .room-drive-file-row,
+.room-drive-panel.light-theme .room-drive-file-row {
+  background: transparent;
+}
+
+.light-theme .room-drive-file-icon,
+.room-drive-panel.light-theme .room-drive-file-icon {
+  background: rgba(0,0,0,0.04);
+  color: rgba(0,0,0,0.65);
+}
+
+.light-theme .room-drive-file-name,
+.room-drive-panel.light-theme .room-drive-file-name {
+  color: #0b1220;
+}
+
+.light-theme .room-drive-file-action,
+.room-drive-panel.light-theme .room-drive-file-action {
+  background: rgba(0,0,0,0.03);
+  color: rgba(0,0,0,0.6);
+}
+
+.light-theme .room-drive-preview-overlay,
+.room-drive-panel.light-theme .room-drive-preview-overlay {
+  background: rgba(255,255,255,0.85);
+}
+
+.light-theme .room-drive-preview-name,
+.room-drive-panel.light-theme .room-drive-preview-name {
+  color: rgba(0,0,0,0.8);
+}

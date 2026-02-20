@@ -614,7 +614,8 @@ function App() {
             <nav className="footer-links">
               <a href="/">Home</a>
               <a href="https://github.com/vabxic?tab=repositories">Projects</a>
-             
+              <a href="/privacy-policy">Privacy</a>
+              <a href="/Terms-and-Services">Terms</a>
             </nav>
           </div>
 

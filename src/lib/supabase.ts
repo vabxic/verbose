@@ -147,9 +147,7 @@ export const updateUserProfile = async (
 // Get email by username for sign-in (uses secure database function)
 export const getEmailByUsername = async (username: string): Promise<string | null> => {
   console.log('Looking up email for username:', username);
-  
-  const { data, error } = await supabase
-    .rpc('get_email_by_username', { lookup_username: username });
+  const { data, error } = await supabase.rpc('get_email_by_username', { lookup_username: username });
 
   console.log('RPC result - data:', data, 'error:', error);
 
@@ -157,7 +155,33 @@ export const getEmailByUsername = async (username: string): Promise<string | nul
     console.error('Error looking up email by username:', error);
     return null;
   }
-  return data ?? null;
+
+  // The RPC may return several shapes depending on Postgres/Supabase version:
+  // - a plain string (the function returns TEXT)
+  // - an array like [{ get_email_by_username: 'user@example.com' }]
+  // - an object with a single key mapping to the email
+  if (!data) return null;
+
+  // If it's already a string, return it
+  if (typeof data === 'string') return data;
+
+  // If it's an array with an object, extract the first value
+  if (Array.isArray(data) && data.length > 0) {
+    const first = data[0];
+    if (typeof first === 'string') return first;
+    if (first && typeof first === 'object') {
+      const vals = Object.values(first);
+      if (vals.length > 0 && typeof vals[0] === 'string') return vals[0];
+    }
+  }
+
+  // If it's an object, try to grab the first value
+  if (typeof data === 'object') {
+    const vals = Object.values(data as Record<string, any>);
+    if (vals.length > 0 && typeof vals[0] === 'string') return vals[0];
+  }
+
+  return null;
 };
 
 // Sign in with username or email and password

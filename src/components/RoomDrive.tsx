@@ -298,9 +298,35 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
     }
   };
 
+  const [isLightThemeLocal, setIsLightThemeLocal] = useState<boolean>(() => {
+    try {
+      return document?.body?.classList?.contains('light-theme') ?? false;
+    } catch {
+      return false;
+    }
+  });
+
+  // Listen for body class changes via storage event (theme toggles write to localStorage)
+  useEffect(() => {
+    const onStorage = () => {
+      try {
+        setIsLightThemeLocal(document.body.classList.contains('light-theme'));
+      } catch {
+        // noop
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    const obs = new MutationObserver(() => onStorage());
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      obs.disconnect();
+    };
+  }, []);
+
   return (
     <div
-      className={`room-drive-panel${dragOver ? ' drag-over' : ''}`}
+      className={`room-drive-panel${dragOver ? ' drag-over' : ''} ${isLightThemeLocal ? 'light-theme' : ''}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
