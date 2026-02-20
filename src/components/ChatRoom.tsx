@@ -80,7 +80,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
   // Mobile more-menu state
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  
 
   // File preview state
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
@@ -121,10 +121,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
       }
     };
     window.addEventListener('storage', onStorage);
-    try {
-      const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer:coarse)').matches;
-      setIsTouchDevice(Boolean(touch));
-    } catch {}
+    
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
@@ -973,20 +970,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
               )}
             </button>
 
-            {isTouchDevice && (
-              <button
-                className="chatroom-call-btn"
-                onClick={handleSwitchCamera}
-                title="Switch camera"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 10v6h-6" />
-                  <path d="M3 14v-6h6" />
-                  <path d="M21 10a8 8 0 0 0-13.9-4" />
-                  <path d="M3 14a8 8 0 0 0 13.9 4" />
-                </svg>
-              </button>
-            )}
+            <button
+              className="chatroom-call-btn"
+              onClick={handleSwitchCamera}
+              title="Switch camera"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 10v6h-6" />
+                <path d="M3 14v-6h6" />
+                <path d="M21 10a8 8 0 0 0-13.9-4" />
+                <path d="M3 14a8 8 0 0 0 13.9 4" />
+              </svg>
+            </button>
 
             <button className="chatroom-call-btn hangup" onClick={hangUp} title="End call">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: 'rotate(136deg)' }}>
