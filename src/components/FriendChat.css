@@ -717,6 +717,8 @@
   height: 100%;
   object-fit: contain;
   background: #000;
+  /* Remote video should not be mirrored */
+  transform: none;
 }
 
 .fc-local-video {
@@ -733,6 +735,8 @@
   z-index: 110;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  /* Mirror only the local preview for the caller */
+  transform: scaleX(-1);
 }
 
 /* Local video corner positions */
