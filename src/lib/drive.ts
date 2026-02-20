@@ -4,6 +4,7 @@ import {
   ensureValidToken,
   getCloudProvider,
 } from './cloud-storage';
+import type { CloudUploadResult } from './cloud-storage';
 
 // ── Types ───────────────────────────────────────
 export interface RoomFile {
