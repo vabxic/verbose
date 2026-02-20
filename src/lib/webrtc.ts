@@ -71,6 +71,7 @@ export class WebRTCService {
   private pc: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private unsubSignals: (() => void) | null = null;
+  private facingMode: 'user' | 'environment' = 'user';
 
   // ICE candidate buffering – candidates that arrive before remoteDescription is set
   private pendingCandidates: RTCIceCandidateInit[] = [];
@@ -104,10 +105,55 @@ export class WebRTCService {
         autoGainControl: true,
       },
       video: callType === 'video'
-        ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+        ? { facingMode: this.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
         : false,
     });
     return this.localStream;
+  }
+
+  // ── Switch front/back camera (mobile) ─────────────────
+  async switchCamera(): Promise<void> {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    // Toggle facing mode
+    this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
+
+    try {
+      // Stop existing video tracks (keep audio if present)
+      this.localStream?.getVideoTracks().forEach((t) => t.stop());
+    } catch {}
+
+    // Acquire new video-only stream (do not disturb audio)
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: this.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+
+    // Merge audio tracks from previous stream if any
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach((t) => newStream.addTrack(t));
+    }
+
+    this.localStream = newStream;
+
+    // Replace video sender track in existing peer connection
+    if (this.pc) {
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const senders = this.pc.getSenders();
+      const videoSender = senders.find((s) => s.track && s.track.kind === 'video');
+      if (videoSender && newVideoTrack) {
+        try {
+          await videoSender.replaceTrack(newVideoTrack);
+        } catch (err) {
+          // Fallback: add track
+          try { this.pc.addTrack(newVideoTrack, newStream); } catch {}
+        }
+      } else if (newVideoTrack) {
+        try { this.pc.addTrack(newVideoTrack, newStream); } catch {}
+      }
+    }
+
+    // Notify UI about the new local stream
+    this.callbacks.onLocalStream(this.localStream);
   }
 
   // ── Create peer connection ──────────────────

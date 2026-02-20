@@ -19,6 +19,7 @@ import { WebRTCService } from '../lib/webrtc';
 import type { CallType, SignalAdapter } from '../lib/webrtc';
 import './FriendChat.css';
 import SaveToDriveHelpModal from './SaveToDriveHelpModal';
+import CloudStorageSettings from './CloudStorageSettings';
 
 interface FriendChatProps {
   friendId: string;
@@ -74,6 +75,9 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
     return 'dark-radial';
   });
   const [showBgCustomizer, setShowBgCustomizer] = useState(false);
+  const [showCloudSettings, setShowCloudSettings] = useState(false);
+
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   type VideoCorner = 'corner-bottom-right' | 'corner-bottom-left' | 'corner-top-right' | 'corner-top-left';
   const [localVideoCorner, setLocalVideoCorner] = useState<VideoCorner>('corner-bottom-right');
@@ -96,6 +100,12 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
 
   // Load messages
   useEffect(() => {
+    try {
+      const touch = typeof window !== 'undefined' && (
+        'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer:coarse)').matches
+      );
+      setIsTouchDevice(Boolean(touch));
+    } catch {}
     if (!user?.id) return;
     (async () => {
       try {
@@ -289,6 +299,14 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
     const next = !videoEnabled;
     setVideoEnabled(next);
     webrtcRef.current?.toggleVideo(next);
+  };
+
+  const handleSwitchCamera = async () => {
+    try {
+      await webrtcRef.current?.switchCamera();
+    } catch (err) {
+      console.error('[FriendChat] Failed to switch camera:', err);
+    }
   };
 
   const acceptCall = async () => {
@@ -616,6 +634,15 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
+          <button
+            className="fc-clear-btn"
+            onClick={() => setShowCloudSettings(true)}
+            title="Cloud Storage / Drive"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="18" height="18">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -626,6 +653,11 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
           onSelectBackground={handleSelectBackground}
           onClose={() => setShowBgCustomizer(false)}
         />
+      )}
+
+      {/* Cloud / Drive settings */}
+      {showCloudSettings && (
+        <CloudStorageSettings onClose={() => setShowCloudSettings(false)} />
       )}
 
       {/* Clear chat confirmation */}
@@ -703,6 +735,21 @@ const FriendChat: React.FC<FriendChatProps> = ({ friendId, friendName, isOnline,
                 </svg>
               )}
             </button>
+
+            {isTouchDevice && (
+              <button
+                className="fc-call-ctrl-btn"
+                onClick={handleSwitchCamera}
+                title="Switch camera"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10v6h-6" />
+                  <path d="M3 14v-6h6" />
+                  <path d="M21 10a8 8 0 0 0-13.9-4" />
+                  <path d="M3 14a8 8 0 0 0 13.9 4" />
+                </svg>
+              </button>
+            )}
 
             <button className="fc-audio-bar-btn" title="Speaker">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
