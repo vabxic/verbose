@@ -367,6 +367,26 @@
   color: rgba(255, 100, 100, 0.9);
 }
 
+.room-drive-file-action.saved,
+.room-drive-file-action.saved:hover {
+  background: rgba(74, 222, 128, 0.12);
+  color: rgba(74, 222, 128, 0.9);
+  cursor: default;
+}
+
+.room-drive-file-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
 /* ── Upload button (inline, next to send) ─── */
 .chatroom-upload-btn {
   display: flex;

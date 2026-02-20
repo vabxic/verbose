@@ -196,11 +196,13 @@
 .fc-msg-bubble {
   display: inline-flex;
   flex-direction: column;
-  gap: 0.3rem;
+  align-items: flex-start;
+  gap: 0.25rem;
   padding: 0.65rem 1rem;
   border-radius: 18px;
   line-height: 1.5;
   word-break: break-word;
+  max-width: 480px;
   animation: fcMsgPop 0.3s ease-out;
 }
 
@@ -229,6 +231,8 @@
   font-size: 0.95rem;
   color: inherit;
   word-wrap: break-word;
+  white-space: pre-wrap;
+  width: 100%;
 }
 
 .fc-msg-time {

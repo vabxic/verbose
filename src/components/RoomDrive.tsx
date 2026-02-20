@@ -5,6 +5,7 @@ import {
   subscribeToRoomFiles,
   uploadRoomFile,
   deleteRoomFile,
+  saveFileToDrive,
   getFileUrl,
   getFileViewUrl,
   isPreviewable,
@@ -35,6 +36,8 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [showCloudSettings, setShowCloudSettings] = useState(false);
   const [cloudSettings, setCloudSettings] = useState<CloudSettings | null>(null);
+  const [savingToDrive, setSavingToDrive] = useState<Record<string, boolean>>({});
+  const [savedToDrive, setSavedToDrive] = useState<Record<string, boolean>>({});
 
   const displayName =
     user?.user_metadata?.full_name ||
@@ -173,6 +176,26 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
     }
   };
 
+  // ── Save to Drive (recipient copies file to their own Drive) ──
+  const handleSaveToDrive = async (file: RoomFile) => {
+    if (!user?.id) return;
+    if (!cloudSettings) {
+      setShowCloudSettings(true);
+      return;
+    }
+    setSavingToDrive((prev) => ({ ...prev, [file.id]: true }));
+    setError(null);
+    try {
+      await saveFileToDrive(file, user.id);
+      setSavedToDrive((prev) => ({ ...prev, [file.id]: true }));
+    } catch (err) {
+      console.error('[RoomDrive] Save to Drive error:', err);
+      setError((err as Error).message || 'Failed to save to Drive');
+    } finally {
+      setSavingToDrive((prev) => ({ ...prev, [file.id]: false }));
+    }
+  };
+
   // ── Delete ─────────────────────────────
   const handleDelete = async (file: RoomFile) => {
     if (!confirm(`Delete "${file.file_name}"?`)) return;
@@ -270,14 +293,14 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
               <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
             </svg>
-            <span>Cloud: {cloudSettings.provider_email}</span>
+            <span>Drive: {cloudSettings.provider_email}</span>
           </button>
         ) : (
           <button className="room-drive-cloud-status" onClick={() => setShowCloudSettings(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
               <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
             </svg>
-            <span>Connect cloud storage</span>
+            <span>Connect Drive to save received files</span>
           </button>
         )}
       </div>
@@ -401,6 +424,30 @@ const RoomDrive: React.FC<RoomDriveProps> = ({ roomId, onClose }) => {
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
               </button>
+              {f.uploader_id !== user?.id && (
+                <button
+                  className={`room-drive-file-action${savedToDrive[f.id] ? ' saved' : ''}`}
+                  onClick={() => handleSaveToDrive(f)}
+                  disabled={savingToDrive[f.id] || savedToDrive[f.id]}
+                  title={savedToDrive[f.id] ? 'Saved to your Drive' : cloudSettings ? 'Save to my Drive' : 'Connect Drive to save'}
+                >
+                  {savingToDrive[f.id] ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" className="spin">
+                      <circle cx="12" cy="12" r="10" strokeDasharray="31.4" strokeDashoffset="10" />
+                    </svg>
+                  ) : savedToDrive[f.id] ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+                      <polyline points="12 13 12 20" />
+                      <polyline points="9 17 12 20 15 17" />
+                    </svg>
+                  )}
+                </button>
+              )}
               {f.uploader_id === user?.id && (
                 <button
                   className="room-drive-file-action delete"

@@ -4,7 +4,6 @@ import {
   ensureValidToken,
   getCloudProvider,
 } from './cloud-storage';
-import type { CloudSettings } from './cloud-storage';
 
 // ── Types ───────────────────────────────────────
 export interface RoomFile {
@@ -68,9 +67,8 @@ export interface UploadProgress {
 /**
  * Upload a file to a room's drive.
  *
- * Strategy:
- *   1. If the user has a connected cloud provider → upload to their cloud.
- *   2. Otherwise → fallback to Supabase Storage.
+ * Files always go to Supabase Storage so every room member can access them.
+ * Recipients can save any file to their own connected Drive via saveFileToDrive().
  *
  * Returns the inserted RoomFile row (status: 'ready').
  */
@@ -81,84 +79,53 @@ export async function uploadRoomFile(
   file: File,
   onProgress?: (p: UploadProgress) => void,
 ): Promise<RoomFile> {
-  // Check if user has active cloud storage
-  const cloudSettings = await getActiveCloudSettings(uploaderId);
-
-  if (cloudSettings) {
-    return uploadToCloud(roomId, uploaderId, uploaderName, file, cloudSettings, onProgress);
-  }
-
+  // Always use Supabase Storage — files belong to the room, not the sender's Drive.
+  // Each recipient can optionally copy the file to their own Drive.
   return uploadToSupabase(roomId, uploaderId, uploaderName, file, onProgress);
 }
 
-// ── Cloud upload path ───────────────────────────
-
-async function uploadToCloud(
-  roomId: string,
-  uploaderId: string,
-  uploaderName: string,
-  file: File,
-  settings: CloudSettings,
+/**
+ * Copy a room file to the current user's connected cloud Drive.
+ *
+ * Used by recipients who want the file in their own Drive.
+ * Fetches the file from storage, then uploads it to their Drive folder.
+ */
+export async function saveFileToDrive(
+  file: RoomFile,
+  userId: string,
   onProgress?: (p: UploadProgress) => void,
-): Promise<RoomFile> {
-  const provider = getCloudProvider(settings.provider as any);
-  const accessToken = await ensureValidToken(uploaderId, settings);
-  const folderId = settings.folder_id!;
-
-  // 1. Insert metadata row (status = uploading)
-  const { data: meta, error: metaErr } = await supabase
-    .from('room_files')
-    .insert({
-      room_id: roomId,
-      uploader_id: uploaderId,
-      uploader_name: uploaderName,
-      file_name: file.name,
-      file_size: file.size,
-      mime_type: file.type || 'application/octet-stream',
-      storage_path: '', // empty – not using Supabase Storage
-      status: 'uploading',
-      cloud_provider: settings.provider,
-    })
-    .select()
-    .single();
-
-  if (metaErr) throw metaErr;
-
-  try {
-    // 2. Upload directly to user's cloud
-    const result = await provider.upload(accessToken, folderId, file, (pct) => {
-      onProgress?.({
-        percent: pct,
-        bytesUploaded: Math.round((pct / 100) * file.size),
-        totalBytes: file.size,
-      });
-    });
-
-    // 3. Mark ready with cloud metadata
-    const { data: updated, error: updateErr } = await supabase
-      .from('room_files')
-      .update({
-        status: 'ready',
-        cloud_file_id: result.fileId,
-        cloud_share_url: result.shareUrl,
-        storage_path: `cloud://${settings.provider}/${result.fileId}`,
-      })
-      .eq('id', meta.id)
-      .select()
-      .single();
-
-    if (updateErr) throw updateErr;
-    return updated as RoomFile;
-  } catch (err) {
-    await supabase
-      .from('room_files')
-      .update({ status: 'failed' })
-      .eq('id', meta.id);
-    throw err;
+): Promise<void> {
+  const cloudSettings = await getActiveCloudSettings(userId);
+  if (!cloudSettings) {
+    throw new Error('Connect Google Drive first in cloud storage settings.');
   }
+
+  // 1. Get download URL
+  const downloadUrl = await getFileUrl(file);
+
+  // 2. Fetch as Blob
+  const response = await fetch(downloadUrl);
+  if (!response.ok) throw new Error(`Failed to fetch file: ${response.status}`);
+  const blob = await response.blob();
+  const fileObj = new File([blob], file.file_name, {
+    type: file.mime_type || 'application/octet-stream',
+  });
+
+  // 3. Upload to user's Drive folder
+  const provider = getCloudProvider(cloudSettings.provider as any);
+  const accessToken = await ensureValidToken(userId, cloudSettings);
+  const folderId = cloudSettings.folder_id!;
+
+  await provider.upload(accessToken, folderId, fileObj, (pct) => {
+    onProgress?.({
+      percent: pct,
+      bytesUploaded: Math.round((pct / 100) * file.file_size),
+      totalBytes: file.file_size,
+    });
+  });
 }
 
-// ── Supabase Storage upload path (fallback) ─────
+// ── Supabase Storage upload path ───────────────
 
 async function uploadToSupabase(
   roomId: string,
