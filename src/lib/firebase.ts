@@ -26,14 +26,19 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID ?? '',
 };
 
-// Warn if values are missing to help developers configure env variables
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  // Keep a console warning (not a throw) so dev builds still run; developer
-  // should populate a `.env` or `.env.local` with the keys shown below.
-  // Example `.env` contents are added to the repository root by the CLI.
-  // See README or request help if you want these loaded differently.
-  // eslint-disable-next-line no-console
-  console.warn('Firebase configuration appears incomplete. Set VITE_FIREBASE_* env vars.');
+// Validate config early and provide actionable error messages.
+const apiKey = firebaseConfig.apiKey?.toString() ?? '';
+const projectId = firebaseConfig.projectId?.toString() ?? '';
+if (!apiKey || apiKey.length < 20) {
+  // A missing or too-short API key usually means the Vite env vars weren't
+  // available at build time or you didn't restart the dev server after
+  // creating `.env`/.env.local. Throw a clear error to guide the developer.
+  throw new Error(
+    'Missing or invalid Firebase API key. Set VITE_FIREBASE_API_KEY in .env or .env.local and restart the dev server.'
+  );
+}
+if (!projectId) {
+  throw new Error('Missing VITE_FIREBASE_PROJECT_ID in environment.');
 }
 
 const app = initializeApp(firebaseConfig);
