@@ -6,7 +6,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   limit as firestoreLimit,
   onSnapshot,
   Timestamp,
@@ -172,8 +171,8 @@ export async function getDirectMessages(
 ): Promise<DirectMessage[]> {
   // Firestore doesn't support OR on different fields natively — run two queries
   const col = collection(db, 'direct_messages');
-  const q1 = query(col, where('sender_id', '==', userId), where('receiver_id', '==', friendId), orderBy('created_at', 'asc'), firestoreLimit(limit));
-  const q2 = query(col, where('sender_id', '==', friendId), where('receiver_id', '==', userId), orderBy('created_at', 'asc'), firestoreLimit(limit));
+  const q1 = query(col, where('sender_id', '==', userId), where('receiver_id', '==', friendId), firestoreLimit(limit));
+  const q2 = query(col, where('sender_id', '==', friendId), where('receiver_id', '==', userId), firestoreLimit(limit));
   const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
   const all = [...s1.docs, ...s2.docs].map((d) => ({ id: d.id, ...d.data(), created_at: toISO(d.data().created_at) }) as DirectMessage);
   all.sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -235,9 +234,9 @@ export function subscribeToDMs(
 ) {
   const col = collection(db, 'direct_messages');
   // Listen for messages from friend to us
-  const q1 = query(col, where('sender_id', '==', friendId), where('receiver_id', '==', userId), orderBy('created_at', 'asc'));
+  const q1 = query(col, where('sender_id', '==', friendId), where('receiver_id', '==', userId));
   // Listen for messages from us to friend (for echo back to own UI)
-  const q2 = query(col, where('sender_id', '==', userId), where('receiver_id', '==', friendId), orderBy('created_at', 'asc'));
+  const q2 = query(col, where('sender_id', '==', userId), where('receiver_id', '==', friendId));
 
   const seenIds = new Set<string>();
 
