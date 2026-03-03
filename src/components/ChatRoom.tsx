@@ -215,8 +215,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
           }
           return prev;
         });
-      } catch {
-        // Silently ignore polling errors
+      } catch (pollErr) {
+        console.warn('[ChatRoom] Poll error:', pollErr);
       }
     }, 3000);
 
