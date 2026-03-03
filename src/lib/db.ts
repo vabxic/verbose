@@ -30,7 +30,9 @@ const firebaseConfig = {
   storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
   appId:             import.meta.env.VITE_FIREBASE_APP_ID ?? '',
-  databaseURL:       import.meta.env.VITE_FIREBASE_DATABASE_URL ?? '',
+  ...(import.meta.env.VITE_FIREBASE_DATABASE_URL
+    ? { databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL as string }
+    : {}),
 };
 
 let app: FirebaseApp;
@@ -51,8 +53,8 @@ export const db = getFirestore(app);
 /** Shared Firebase Storage instance (for file uploads) */
 export const storage = getStorage(app);
 
-/** Shared Realtime Database instance (used for presence) */
-export const rtdb = getDatabase(app);
+/** Shared Realtime Database instance (used for presence). Null when VITE_FIREBASE_DATABASE_URL is not configured. */
+export const rtdb = import.meta.env.VITE_FIREBASE_DATABASE_URL ? getDatabase(app) : null;
 
 // ---------------------------------------------------------------------------
 // User Profile types & helpers (previously in supabase.ts)
