@@ -9,7 +9,19 @@
  *   receiver→ download / view via share link (zero platform storage)
  */
 
-import { supabase } from './supabase';
+import { db } from './db';
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  limit as firestoreLimit,
+} from 'firebase/firestore';
 
 // ═══════════════════════════════════════════════════
 // Types
@@ -547,20 +559,21 @@ export function getCloudProvider(type: CloudProviderType): CloudProvider {
 
 /** Get the active cloud setting for the current user (if any). */
 export async function getActiveCloudSettings(userId: string): Promise<CloudSettings | null> {
-  const { data, error } = await supabase
-    .from('user_cloud_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
+  try {
+    const q = query(
+      collection(db, 'user_cloud_settings'),
+      where('user_id', '==', userId),
+      where('is_active', '==', true),
+      orderBy('updated_at', 'desc'),
+      firestoreLimit(1),
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() } as CloudSettings;
+  } catch (error) {
     console.error('[CloudStorage] Error fetching cloud settings:', error);
     return null;
   }
-  return data as CloudSettings | null;
 }
 
 /** Save or update cloud settings after OAuth. */
@@ -573,38 +586,28 @@ export async function saveCloudSettings(
   folderId: string,
   folderName: string,
 ): Promise<CloudSettings> {
-  const { data, error } = await supabase
-    .from('user_cloud_settings')
-    .upsert(
-      {
-        user_id: userId,
-        provider,
-        access_token: accessToken,
-        provider_email: email,
-        token_expires_at: expiresAt.toISOString(),
-        folder_id: folderId,
-        folder_name: folderName,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,provider' },
-    )
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as CloudSettings;
+  const id = `${userId}_${provider}`;
+  const now = new Date().toISOString();
+  const data = {
+    user_id: userId,
+    provider,
+    access_token: accessToken,
+    refresh_token: null,
+    provider_email: email,
+    token_expires_at: expiresAt.toISOString(),
+    folder_id: folderId,
+    folder_name: folderName,
+    is_active: true,
+    created_at: now,
+    updated_at: now,
+  };
+  await setDoc(doc(db, 'user_cloud_settings', id), data, { merge: true });
+  return { id, ...data };
 }
 
 /** Disconnect a cloud provider. */
 export async function disconnectCloudProvider(userId: string, provider: CloudProviderType): Promise<void> {
-  const { error } = await supabase
-    .from('user_cloud_settings')
-    .delete()
-    .eq('user_id', userId)
-    .eq('provider', provider);
-
-  if (error) throw error;
+  await deleteDoc(doc(db, 'user_cloud_settings', `${userId}_${provider}`));
 }
 
 /** Check whether the stored token is still valid. */
@@ -625,16 +628,13 @@ export async function ensureValidToken(userId: string, settings: CloudSettings):
   const auth = await provider.authorize();
 
   // Update in DB
-  await supabase
-    .from('user_cloud_settings')
-    .update({
-      access_token: auth.accessToken,
-      provider_email: auth.email,
-      token_expires_at: auth.expiresAt.toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId)
-    .eq('provider', settings.provider);
+  const docId = `${userId}_${settings.provider}`;
+  await updateDoc(doc(db, 'user_cloud_settings', docId), {
+    access_token: auth.accessToken,
+    provider_email: auth.email,
+    token_expires_at: auth.expiresAt.toISOString(),
+    updated_at: new Date().toISOString(),
+  });
 
   return auth.accessToken;
 }

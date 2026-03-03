@@ -14,8 +14,8 @@ import {
 } from '../lib/firebase';
 import {
   getUserProfile,
-} from '../lib/supabase';
-import type { UserProfile } from '../lib/supabase';
+} from '../lib/db';
+import type { UserProfile } from '../lib/db';
 
 type AppUser = {
   id: string;

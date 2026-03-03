@@ -445,13 +445,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
 
           if (user.id === room.created_by) {
             try {
-              const { supabase } = await import('../lib/supabase');
+              const { transferRoomHost, deactivateRoom } = await import('../lib/rooms');
               const remaining = await getRoomParticipants(room.id);
 
               if (remaining.length > 0) {
                 // Transfer host to a random remaining participant
                 const newHost = remaining[Math.floor(Math.random() * remaining.length)];
-                await supabase.from('rooms').update({ created_by: newHost.user_id }).eq('id', room.id);
+                await transferRoomHost(room.id, newHost.user_id);
                 await sendMessage(
                   room.id,
                   'system',
@@ -461,7 +461,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
                 );
               } else {
                 // No one left — deactivate room and delete all storage
-                await supabase.from('rooms').update({ is_active: false }).eq('id', room.id);
+                await deactivateRoom(room.id);
                 await deleteAllRoomFiles(room.id);
               }
             } catch (err) {

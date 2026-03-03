@@ -1,6 +1,21 @@
-import { supabase } from './supabase';
+import { db } from './db';
+import {
+  collection,
+  doc,
+  addDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit as firestoreLimit,
+  onSnapshot,
+  Timestamp,
+} from 'firebase/firestore';
 
-// ── Types ───────────────────────────────────────
+// -- Types ---
 export interface Room {
   id: string;
   code: string;
@@ -40,287 +55,144 @@ export interface RoomSignal {
   created_at: string;
 }
 
-// ── Room code generation (client-side fallback) ─
+// -- Helpers --
+
+function toISO(val: any): string {
+  if (!val) return new Date().toISOString();
+  if (val instanceof Timestamp) return val.toDate().toISOString();
+  if (typeof val === 'string') return val;
+  return new Date().toISOString();
+}
+
+function docToRoom(id: string, d: any): Room {
+  return { id, code: d.code, name: d.name ?? null, created_by: d.created_by, is_active: d.is_active ?? true, max_participants: d.max_participants ?? 50, created_at: toISO(d.created_at), updated_at: toISO(d.updated_at) };
+}
+function docToParticipant(id: string, d: any): RoomParticipant {
+  return { id, room_id: d.room_id, user_id: d.user_id, display_name: d.display_name ?? null, joined_at: toISO(d.joined_at) };
+}
+function docToMessage(id: string, d: any): RoomMessage {
+  return { id, room_id: d.room_id, sender_id: d.sender_id, sender_name: d.sender_name ?? null, content: d.content, type: d.type ?? 'text', created_at: toISO(d.created_at) };
+}
+
 function generateRoomCode(length = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
-  for (let i = 0; i < length; i++) {
-    code += chars[array[i] % chars.length];
-  }
+  for (let i = 0; i < length; i++) code += chars[array[i] % chars.length];
   return code;
 }
 
-// ── Room CRUD ───────────────────────────────────
+// -- Room CRUD --
 
-export async function createRoom(
-  userId: string,
-  name?: string,
-): Promise<Room> {
-  // Try up to 5 times to generate a unique code
+export async function createRoom(userId: string, name?: string): Promise<Room> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = generateRoomCode();
-    const { data, error } = await supabase
-      .from('rooms')
-      .insert({
-        code,
-        name: name || `Room ${code}`,
-        created_by: userId,
-        max_participants: 50,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      // Unique violation → retry with new code
-      if (error.code === '23505') continue;
-      throw error;
-    }
-    return data as Room;
+    const existing = await getDocs(query(collection(db, 'rooms'), where('code', '==', code), where('is_active', '==', true)));
+    if (!existing.empty) continue;
+    const now = new Date().toISOString();
+    const data = { code, name: name || `Room ${code}`, created_by: userId, is_active: true, max_participants: 50, created_at: now, updated_at: now };
+    const ref = await addDoc(collection(db, 'rooms'), data);
+    return { id: ref.id, ...data };
   }
   throw new Error('Could not generate a unique room code. Please try again.');
 }
 
-export async function joinRoomByCode(
-  code: string,
-  userId: string,
-  displayName: string,
-): Promise<{ room: Room; participant: RoomParticipant }> {
-  console.log('[rooms] Joining room by code:', code, 'user:', userId, 'name:', displayName);
-  // Find the room
-  const { data: room, error: roomErr } = await supabase
-    .from('rooms')
-    .select('*')
-    .eq('code', code.toUpperCase().trim())
-    .eq('is_active', true)
-    .single();
-
-  console.log('[rooms] Room lookup result:', { room, error: roomErr });
-
-  if (roomErr || !room) {
-    console.error('[rooms] Room not found:', roomErr);
-    throw new Error('Room not found or no longer active.');
-  }
-
-  // Upsert participant
-  console.log('[rooms] Upserting participant...');
-  const { data: participant, error: partErr } = await supabase
-    .from('room_participants')
-    .upsert(
-      { room_id: room.id, user_id: userId, display_name: displayName },
-      { onConflict: 'room_id,user_id' },
-    )
-    .select()
-    .single();
-
-  console.log('[rooms] Participant upsert result:', { participant, error: partErr });
-
-  if (partErr) {
-    console.error('[rooms] Failed to add participant:', partErr);
-    throw partErr;
-  }
-
-  console.log('[rooms] Successfully joined room');
-  return { room: room as Room, participant: participant as RoomParticipant };
+export async function joinRoomByCode(code: string, userId: string, displayName: string): Promise<{ room: Room; participant: RoomParticipant }> {
+  const q = query(collection(db, 'rooms'), where('code', '==', code.toUpperCase().trim()), where('is_active', '==', true));
+  const snap = await getDocs(q);
+  if (snap.empty) throw new Error('Room not found or no longer active.');
+  const roomDoc = snap.docs[0];
+  const room = docToRoom(roomDoc.id, roomDoc.data());
+  const pid = `${room.id}_${userId}`;
+  const pData = { room_id: room.id, user_id: userId, display_name: displayName, joined_at: new Date().toISOString() };
+  await setDoc(doc(db, 'room_participants', pid), pData, { merge: true });
+  return { room, participant: { id: pid, ...pData } };
 }
 
 export async function getRoomParticipants(roomId: string): Promise<RoomParticipant[]> {
-  const { data, error } = await supabase
-    .from('room_participants')
-    .select('*')
-    .eq('room_id', roomId)
-    .order('joined_at', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as RoomParticipant[];
+  const q = query(collection(db, 'room_participants'), where('room_id', '==', roomId), orderBy('joined_at', 'asc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => docToParticipant(d.id, d.data()));
 }
 
 export async function leaveRoom(roomId: string, userId: string): Promise<void> {
-  await supabase
-    .from('room_participants')
-    .delete()
-    .eq('room_id', roomId)
-    .eq('user_id', userId);
+  await deleteDoc(doc(db, 'room_participants', `${roomId}_${userId}`));
 }
 
-// ── Messages ────────────────────────────────────
-
-export async function sendMessage(
-  roomId: string,
-  senderId: string,
-  senderName: string,
-  content: string,
-  type: 'text' | 'system' | 'file' = 'text',
-): Promise<RoomMessage> {
-  console.log('[rooms] Sending message:', { roomId, senderId, senderName, content, type });
-  const { data, error } = await supabase
-    .from('room_messages')
-    .insert({ room_id: roomId, sender_id: senderId, sender_name: senderName, content, type })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('[rooms] Error sending message:', error);
-    throw error;
-  }
-  console.log('[rooms] Message sent successfully:', data);
-  return data as RoomMessage;
+export async function transferRoomHost(roomId: string, newHostUserId: string): Promise<void> {
+  await updateDoc(doc(db, 'rooms', roomId), { created_by: newHostUserId });
 }
 
-export async function getMessages(
-  roomId: string,
-  limit = 100,
-): Promise<RoomMessage[]> {
-  console.log('[rooms] Loading messages for room:', roomId);
-  const { data, error } = await supabase
-    .from('room_messages')
-    .select('*')
-    .eq('room_id', roomId)
-    .order('created_at', { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    console.error('[rooms] Error loading messages:', error);
-    throw error;
-  }
-  console.log('[rooms] Loaded', data?.length || 0, 'messages');
-  return (data ?? []) as RoomMessage[];
+export async function deactivateRoom(roomId: string): Promise<void> {
+  await updateDoc(doc(db, 'rooms', roomId), { is_active: false });
 }
 
-// ── Signaling (WebRTC) ──────────────────────────
+// -- Messages --
 
-/** Delete old signals for a room to prevent stale offer/answer confusion */
+export async function sendMessage(roomId: string, senderId: string, senderName: string, content: string, type: 'text' | 'system' | 'file' = 'text'): Promise<RoomMessage> {
+  const now = new Date().toISOString();
+  const data = { room_id: roomId, sender_id: senderId, sender_name: senderName, content, type, created_at: now };
+  const ref = await addDoc(collection(db, 'room_messages'), data);
+  return { id: ref.id, ...data };
+}
+
+export async function getMessages(roomId: string, limit = 100): Promise<RoomMessage[]> {
+  const q = query(collection(db, 'room_messages'), where('room_id', '==', roomId), orderBy('created_at', 'asc'), firestoreLimit(limit));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => docToMessage(d.id, d.data()));
+}
+
+// -- Signaling (WebRTC) --
+
 export async function cleanOldSignals(roomId: string): Promise<void> {
-  console.log('[rooms] Cleaning old signals for room:', roomId);
-  const { error } = await supabase
-    .from('room_signals')
-    .delete()
-    .eq('room_id', roomId);
-
-  if (error) {
-    // Non-fatal – RLS may prevent deleting other users' signals
-    console.warn('[rooms] Could not clean old signals:', error.message);
-  }
+  const q = query(collection(db, 'room_signals'), where('room_id', '==', roomId));
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
 }
 
-export async function sendSignal(
-  roomId: string,
-  senderId: string,
-  type: RoomSignal['type'],
-  payload: Record<string, unknown>,
-  targetId?: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from('room_signals')
-    .insert({
-      room_id: roomId,
-      sender_id: senderId,
-      target_id: targetId ?? null,
-      type,
-      payload,
+export async function sendSignal(roomId: string, senderId: string, type: RoomSignal['type'], payload: Record<string, unknown>, targetId?: string): Promise<void> {
+  await addDoc(collection(db, 'room_signals'), { room_id: roomId, sender_id: senderId, target_id: targetId ?? null, type, payload, created_at: new Date().toISOString() });
+}
+
+// -- Realtime subscriptions (Firestore onSnapshot) --
+
+export function subscribeToMessages(roomId: string, onMessage: (msg: RoomMessage) => void) {
+  const q = query(collection(db, 'room_messages'), where('room_id', '==', roomId), orderBy('created_at', 'asc'));
+  const seenIds = new Set<string>();
+  const unsub = onSnapshot(q, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'added' && !seenIds.has(change.doc.id)) {
+        seenIds.add(change.doc.id);
+        onMessage(docToMessage(change.doc.id, change.doc.data()));
+      }
     });
-
-  if (error) throw error;
+  });
+  return unsub;
 }
 
-// ── Realtime subscriptions ──────────────────────
-
-export function subscribeToMessages(
-  roomId: string,
-  onMessage: (msg: RoomMessage) => void,
-) {
-  console.log('[rooms] Setting up message subscription for room:', roomId);
-  const channel = supabase
-    .channel(`room-messages-${roomId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'room_messages',
-        filter: `room_id=eq.${roomId}`,
-      },
-      (payload) => {
-        console.log('[rooms] Received realtime message event:', payload);
-        onMessage(payload.new as RoomMessage);
-      },
-    )
-    .subscribe((status) => {
-      console.log('[rooms] Message subscription status:', status);
-    });
-
-  return () => {
-    console.log('[rooms] Unsubscribing from messages');
-    supabase.removeChannel(channel);
-  };
-}
-
-export function subscribeToSignals(
-  roomId: string,
-  currentUserId: string,
-  onSignal: (signal: RoomSignal) => void,
-) {
-  console.log('[rooms] Setting up signal subscription for room:', roomId, 'user:', currentUserId);
-  const channel = supabase
-    .channel(`room-signals-${roomId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'room_signals',
-        filter: `room_id=eq.${roomId}`,
-      },
-      (payload) => {
-        const signal = payload.new as RoomSignal;
-        console.log('[rooms] Received signal:', signal);
-        // Ignore own signals and signals not targeted at us
-        if (signal.sender_id === currentUserId) {
-          console.log('[rooms] Ignoring own signal');
-          return;
-        }
-        if (signal.target_id && signal.target_id !== currentUserId) {
-          console.log('[rooms] Signal not targeted at us, ignoring');
-          return;
-        }
-        console.log('[rooms] Processing signal');
+export function subscribeToSignals(roomId: string, currentUserId: string, onSignal: (signal: RoomSignal) => void) {
+  const q = query(collection(db, 'room_signals'), where('room_id', '==', roomId));
+  const seenIds = new Set<string>();
+  const unsub = onSnapshot(q, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'added' && !seenIds.has(change.doc.id)) {
+        seenIds.add(change.doc.id);
+        const d = change.doc.data();
+        const signal: RoomSignal = { id: change.doc.id, room_id: d.room_id, sender_id: d.sender_id, target_id: d.target_id ?? null, type: d.type, payload: d.payload, created_at: toISO(d.created_at) };
+        if (signal.sender_id === currentUserId) return;
+        if (signal.target_id && signal.target_id !== currentUserId) return;
         onSignal(signal);
-      },
-    )
-    .subscribe((status) => {
-      console.log('[rooms] Signal subscription status:', status);
+      }
     });
-
-  return () => {
-    console.log('[rooms] Unsubscribing from signals');
-    supabase.removeChannel(channel);
-  };
+  });
+  return unsub;
 }
 
-export function subscribeToParticipants(
-  roomId: string,
-  onChange: (participants: RoomParticipant[]) => void,
-) {
-  // Refresh full list on any change
-  const channel = supabase
-    .channel(`room-participants-${roomId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'room_participants',
-        filter: `room_id=eq.${roomId}`,
-      },
-      async () => {
-        const participants = await getRoomParticipants(roomId);
-        onChange(participants);
-      },
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
+export function subscribeToParticipants(roomId: string, onChange: (participants: RoomParticipant[]) => void) {
+  const q = query(collection(db, 'room_participants'), where('room_id', '==', roomId));
+  const unsub = onSnapshot(q, (snapshot) => {
+    onChange(snapshot.docs.map(d => docToParticipant(d.id, d.data())));
+  });
+  return unsub;
 }
