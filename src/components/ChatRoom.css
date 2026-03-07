@@ -7,7 +7,7 @@
   flex-direction: row;
   height: 100vh;
   width: 100%;
-  background-image: repeating-linear-gradient(144deg, rgb(88, 88, 88) 0px, rgb(88, 88, 88) 95px,rgb(204, 204, 204) 95px, rgb(204, 204, 204) 190px,rgb(184, 184, 184) 190px, rgb(184, 184, 184) 285px,rgb(223, 223, 223) 285px, rgb(223, 223, 223) 380px,rgb(107, 107, 107) 380px, rgb(107, 107, 107) 475px,rgb(127, 127, 127) 475px, rgb(127, 127, 127) 570px,rgb(146, 146, 146) 570px, rgb(146, 146, 146) 665px,rgb(165, 165, 165) 665px, rgb(165, 165, 165) 760px);
+  background: #060609;
   color: #e0e0e0;
   position: relative;
   overflow: hidden;
@@ -27,12 +27,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 1rem;
-  background: rgba(8, 8, 12, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(24px);
+  padding: 0.65rem 1.15rem;
+  background: rgba(8, 8, 14, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
   flex-shrink: 0;
   z-index: 20;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 .chatroom-header-left {
@@ -51,16 +53,16 @@
   height: 34px;
   border-radius: 10px;
   border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   flex-shrink: 0;
 }
 
 .chatroom-back-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .chatroom-back-btn svg {
@@ -76,10 +78,11 @@
 
 .chatroom-room-name {
   font-size: 1rem;
-  font-weight: 650;
+  font-weight: 600;
   color: #ffffff;
   margin: 0;
   line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .chatroom-participant-count-wrapper {
@@ -107,11 +110,11 @@
   margin-top: 0.5rem;
   min-width: 220px;
   max-width: 280px;
-  border-radius: 12px;
-  background: rgba(20, 20, 30, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  background: rgba(12, 12, 20, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
   z-index: 50;
   animation: tooltipFadeIn 0.2s ease-out;
 }
@@ -214,10 +217,10 @@
   height: 34px;
   border-radius: 10px;
   border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   flex-shrink: 0;
   position: relative;
 }
@@ -228,12 +231,12 @@
 }
 
 .chatroom-hdr-btn:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .chatroom-hdr-btn.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
@@ -251,12 +254,14 @@
 .chatroom-hdr-btn.chatroom-code-badge {
   width: auto;
   gap: 0.4rem;
-  padding: 0 0.7rem;
+  padding: 0 0.75rem;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .chatroom-hdr-btn.chatroom-code-badge .chatroom-code-text {
@@ -317,13 +322,13 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 170px;
-  padding: 0.35rem;
-  border-radius: 14px;
-  background: rgba(16, 16, 24, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(20px);
+  min-width: 180px;
+  padding: 0.4rem;
+  border-radius: 16px;
+  background: rgba(10, 10, 18, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
   z-index: 60;
   animation: morePopIn 0.18s ease-out;
 }
@@ -406,10 +411,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.55rem 1rem;
-  background: rgba(8, 8, 16, 0.96);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
+  padding: 0.55rem 1.15rem;
+  background: rgba(8, 8, 14, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
   flex-shrink: 0;
   z-index: 20;
   gap: 0.75rem;
@@ -794,10 +800,10 @@
 .chatroom-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem 1.25rem 0.75rem;
+  padding: 1.5rem 1.5rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
@@ -839,8 +845,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   margin-bottom: 0.5rem;
   animation: floatIcon 3s ease-in-out infinite;
 }
@@ -878,15 +884,16 @@
 /* System message */
 .chatroom-system-msg {
   text-align: center;
-  font-size: 0.8rem;
-  color: #000000; /* system messages appear in black */
-  padding: 0.6rem 1rem;
-  background: rgba(255, 255, 255, 0.92); /* light background to contrast black text */
-  border-radius: 12px;
-  margin: 0.3rem auto;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 0.45rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 100px;
+  margin: 0.4rem auto;
   max-width: 70%;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 /* Message bubble */
@@ -908,25 +915,25 @@
 }
 
 .chatroom-msg-sender {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 0.25rem;
   padding: 0 0.85rem;
-  opacity: 0.8;
+  letter-spacing: 0.02em;
 }
 
 .chatroom-msg-bubble {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.25rem;
+  gap: 0.2rem;
   padding: 0.65rem 1rem;
   border-radius: 18px;
-  line-height: 1.5;
+  line-height: 1.55;
   word-break: break-word;
   max-width: 480px;
-  animation: messagePop 0.3s ease-out;
+  animation: messagePop 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 @keyframes messagePop {
@@ -941,34 +948,39 @@
 }
 
 .chatroom-msg.own .chatroom-msg-bubble {
-  background: rgba(40, 40, 50, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(24, 24, 34, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-bottom-right-radius: 6px;
   color: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
 }
 
 .chatroom-msg.other .chatroom-msg-bubble {
-  background: rgba(30, 30, 40, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(12, 12, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.03);
   border-bottom-left-radius: 6px;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
 
 .chatroom-msg-text {
-  font-size: 0.95rem;
+  font-size: 0.93rem;
   color: inherit;
   word-wrap: break-word;
   white-space: pre-wrap;
   width: 100%;
+  line-height: 1.55;
+  font-weight: 400;
 }
 
 .chatroom-msg-time {
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.2);
   white-space: nowrap;
   flex-shrink: 0;
   align-self: flex-end;
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
+  font-weight: 400;
 }
 
 /* Share link (legacy – now uses .chatroom-hdr-btn) */
@@ -1002,9 +1014,10 @@
   gap: 1.25rem;
   padding: 2.5rem 3rem;
   border-radius: 24px;
-  background: rgba(20, 20, 30, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  background: rgba(10, 10, 18, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
   animation: incomingSlideUp 0.35s ease-out;
 }
 
@@ -1146,9 +1159,10 @@
   gap: 1rem;
   padding: 2rem 2.5rem;
   border-radius: 20px;
-  background: rgba(30, 30, 40, 0.95);
-  border: 1px solid rgba(255, 150, 100, 0.2);
-  box-shadow: 0 12px 40px rgba(255, 150, 100, 0.1);
+  background: rgba(12, 12, 20, 0.96);
+  border: 1px solid rgba(255, 150, 100, 0.1);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
   animation: lineBusySlideDown 0.3s ease-out;
   max-width: 320px;
   text-align: center;
@@ -1190,37 +1204,39 @@
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  padding: 0.75rem 1rem 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(8, 8, 12, 0.85);
-  backdrop-filter: blur(16px);
+  padding: 0.75rem 1.15rem 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(8, 8, 14, 0.7);
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
   flex-shrink: 0;
 }
 
 .chatroom-input {
   flex: 1;
   padding: 0.65rem 1rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
   color: #ffffff;
   font-size: 0.92rem;
   font-family: inherit;
   resize: none;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   min-height: 38px;
   max-height: 120px;
 }
 
 .chatroom-input::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.2);
   font-weight: 400;
 }
 
 .chatroom-input:focus {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.02);
 }
 
 .chatroom-send-btn {
@@ -1229,18 +1245,18 @@
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   flex-shrink: 0;
 }
 
 .chatroom-send-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .chatroom-send-btn:active:not(:disabled) {
@@ -1476,11 +1492,12 @@
 .chatroom-friend-modal {
   width: 90%;
   max-width: 400px;
-  padding: 1.75rem;
-  border-radius: 20px;
-  background: rgba(18, 18, 30, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  padding: 2rem;
+  border-radius: 22px;
+  background: rgba(10, 10, 18, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
   animation: friendModalSlide 0.25s ease;
 }
 
