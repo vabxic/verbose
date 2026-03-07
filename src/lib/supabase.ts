@@ -1,21 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ---------------------------------------------------------------------------
-// Supabase is used exclusively for database and storage.
-// Authentication is handled by Firebase (see src/lib/firebase.ts).
-// ---------------------------------------------------------------------------
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    'Supabase credentials not found. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'
+  );
+}
 
 export const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
+  supabaseUrl || '',
+  supabaseAnonKey || ''
 );
+
+function validateSupabaseUrl() {
+  if (!supabaseUrl) {
+    throw new Error('VITE_SUPABASE_URL is not set. Please set VITE_SUPABASE_URL in your .env file to your Supabase project URL (e.g. https://<project-ref>.supabase.co)');
+  }
+  const ok = /^https?:\/\/[a-z0-9-]+\.supabase\.co(?:\/.*)?$/i.test(supabaseUrl);
+  if (!ok) {
+    throw new Error(`VITE_SUPABASE_URL appears invalid: ${supabaseUrl}. It must match https://<project-ref>.supabase.co`);
+  }
+}
 
 // Database types for user profiles
 export interface UserProfile {
-  id: string;   // Firebase UID
+  id: string;
   email: string;
   username: string | null;
   full_name: string | null;
@@ -24,6 +35,85 @@ export interface UserProfile {
   updated_at: string;
   is_anonymous: boolean;
 }
+
+// Auth helper functions
+export const signUpWithEmail = async (
+  email: string,
+  password: string,
+  username?: string,
+  fullName?: string
+) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        username,
+        full_name: fullName,
+      },
+    },
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+export const signInWithEmail = async (email: string, password: string) => {
+  console.log('signInWithEmail called with:', email);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  console.log('signInWithPassword result - data:', data, 'error:', error);
+
+  if (error) {
+    console.error('Auth error:', error.message);
+    throw error;
+  }
+  return data;
+};
+
+export const signInWithGoogle = async () => {
+  validateSupabaseUrl();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+export const signInWithGitHub = async () => {
+  validateSupabaseUrl();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+export const signInAnonymously = async () => {
+  const { data, error } = await supabase.auth.signInAnonymously();
+
+  if (error) throw error;
+  return data;
+};
+
+export const signOut = async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+};
+
+export const getCurrentUser = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return user;
+};
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   const { data, error } = await supabase
@@ -94,4 +184,56 @@ export const getEmailByUsername = async (username: string): Promise<string | nul
   return null;
 };
 
+// Sign in with username or email and password
+export const signInWithUsername = async (usernameOrEmail: string, password: string) => {
+  console.log('signInWithUsername called for:', usernameOrEmail);
+  
+  // Check if the input is an email address
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isEmail = emailRegex.test(usernameOrEmail);
+  
+  if (isEmail) {
+    // If it's an email, sign in directly with email
+    console.log('Input is an email, signing in directly...');
+    const result = await signInWithEmail(usernameOrEmail, password);
+    console.log('signInWithEmail result:', result);
+    return result;
+  } else {
+    // If it's a username, look up the email first
+    const email = await getEmailByUsername(usernameOrEmail);
+    console.log('Found email:', email);
+    
+    if (!email) {
+      throw new Error('Username not found');
+    }
+    
+    // Then sign in with the email
+    console.log('Attempting signInWithEmail...');
+    const result = await signInWithEmail(email, password);
+    console.log('signInWithEmail result:', result);
+    return result;
+  }
+};
 
+// Send password reset email
+export const resetPassword = async (email: string) => {
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+// Sign in with magic link (passwordless email authentication)
+export const signInWithMagicLink = async (email: string) => {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  if (error) throw error;
+  return data;
+};

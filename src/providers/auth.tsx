@@ -1,38 +1,22 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { User, Session } from '@supabase/supabase-js';
 import {
-  auth,
-  onAuthStateChanged,
+  supabase,
   signInWithUsername,
   signUpWithEmail,
   signInWithGoogle,
   signInWithGitHub,
   signInAnonymously,
-  signOut as firebaseSignOut,
-  resetPassword as firebaseResetPassword,
-  signInWithMagicLink as firebaseMagicLink,
-  type FirebaseUser,
-} from '../lib/firebase';
-import {
+  signOut as supabaseSignOut,
   getUserProfile,
+  resetPassword as supabaseResetPassword,
+  signInWithMagicLink as supabaseMagicLink,
 } from '../lib/supabase';
 import type { UserProfile } from '../lib/supabase';
 
-type AppUser = {
-  id: string;
-  email?: string | null;
-  user_metadata?: {
-    full_name?: string | null;
-    name?: string | null;
-    username?: string | null;
-    avatar_url?: string | null;
-    picture?: string | null;
-  } | null;
-  is_anonymous?: boolean;
-};
-
 interface AuthContextType {
-  user: AppUser | null;
-  session: AppUser | null;  // mirrors `user`; Firebase has no separate session object
+  user: User | null;
+  session: Session | null;
   profile: UserProfile | null;
   loading: boolean;
   isAnonymous: boolean;
@@ -62,28 +46,12 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [session, setSession] = useState<AppUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isAnonymous = user?.is_anonymous ?? false;
-
-  const normalizeFirebaseUser = (fu: FirebaseUser | null): AppUser | null => {
-    if (!fu) return null;
-    return {
-      id: fu.uid,
-      email: fu.email ?? null,
-      user_metadata: {
-        full_name: fu.displayName ?? null,
-        name: fu.displayName ?? null,
-        username: null,
-        avatar_url: (fu as any).photoURL ?? null,
-        picture: (fu as any).photoURL ?? null,
-      },
-      is_anonymous: (fu as any).isAnonymous ?? false,
-    };
-  };
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -108,23 +76,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    // Firebase fires onAuthStateChanged immediately with the current user
-    // (or null), so we never need to call getSession() separately.
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      const appUser = normalizeFirebaseUser(firebaseUser);
-      setUser(appUser);
-      setSession(appUser);
+    // Get initial session and validate user exists. Ensure loading always finishes.
+    (async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (firebaseUser) {
-        await fetchProfile(firebaseUser.uid);
-      } else {
-        setProfile(null);
+        if (error) {
+          console.error('Error getting session:', error);
+          setSession(null);
+          setUser(null);
+          return;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          // Double-check the user still exists (may have been deleted in dashboard)
+          try {
+            const { data: { user }, error: userErr } = await supabase.auth.getUser();
+            if (userErr) {
+              console.error('Error verifying user:', userErr);
+              // clear session to force re-auth
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+            } else if (!user) {
+              // user not found -> sign out locally
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+            } else {
+              await fetchProfile(user.id);
+            }
+          } catch (err) {
+            console.error('Unexpected error verifying user:', err);
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to get session:', err);
+      } finally {
+        setLoading(false);
       }
+    })();
 
-      setLoading(false);
-    });
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-    return () => unsubscribe();
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (username: string, password: string) => {
@@ -141,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      await firebaseResetPassword(email);
+      await supabaseResetPassword(email);
     } catch (err) {
       console.error('Password reset failed:', err);
       throw err;
@@ -150,7 +167,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithMagicLink = async (email: string) => {
     try {
-      await firebaseMagicLink(email);
+      await supabaseMagicLink(email);
     } catch (err) {
       console.error('Magic link sign-in failed:', err);
       throw err;
@@ -216,7 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setSession(null);
     setProfile(null);
     try {
-      await firebaseSignOut();
+      await supabaseSignOut();
     } catch (err) {
       console.error('Sign-out error:', err);
     }
