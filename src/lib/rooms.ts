@@ -9,6 +9,7 @@ import {
   deleteDoc,
   query,
   where,
+  orderBy,
   limit as firestoreLimit,
   onSnapshot,
   Timestamp,
@@ -110,9 +111,9 @@ export async function joinRoomByCode(code: string, userId: string, displayName: 
 }
 
 export async function getRoomParticipants(roomId: string): Promise<RoomParticipant[]> {
-  const q = query(collection(db, 'room_participants'), where('room_id', '==', roomId));
+  const q = query(collection(db, 'room_participants'), where('room_id', '==', roomId), orderBy('joined_at', 'asc'));
   const snap = await getDocs(q);
-  return snap.docs.map(d => docToParticipant(d.id, d.data())).sort((a, b) => a.joined_at.localeCompare(b.joined_at));
+  return snap.docs.map(d => docToParticipant(d.id, d.data()));
 }
 
 export async function leaveRoom(roomId: string, userId: string): Promise<void> {
@@ -137,9 +138,9 @@ export async function sendMessage(roomId: string, senderId: string, senderName: 
 }
 
 export async function getMessages(roomId: string, limit = 100): Promise<RoomMessage[]> {
-  const q = query(collection(db, 'room_messages'), where('room_id', '==', roomId), firestoreLimit(limit));
+  const q = query(collection(db, 'room_messages'), where('room_id', '==', roomId), orderBy('created_at', 'asc'), firestoreLimit(limit));
   const snap = await getDocs(q);
-  return snap.docs.map(d => docToMessage(d.id, d.data())).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  return snap.docs.map(d => docToMessage(d.id, d.data()));
 }
 
 // -- Signaling (WebRTC) --
@@ -157,7 +158,7 @@ export async function sendSignal(roomId: string, senderId: string, type: RoomSig
 // -- Realtime subscriptions (Firestore onSnapshot) --
 
 export function subscribeToMessages(roomId: string, onMessage: (msg: RoomMessage) => void) {
-  const q = query(collection(db, 'room_messages'), where('room_id', '==', roomId));
+  const q = query(collection(db, 'room_messages'), where('room_id', '==', roomId), orderBy('created_at', 'asc'));
   const seenIds = new Set<string>();
   const unsub = onSnapshot(q, (snapshot) => {
     snapshot.docChanges().forEach((change) => {
