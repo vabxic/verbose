@@ -39,9 +39,8 @@ if (!apiKey || apiKey.length < 20) {
 }
 if (!projectId) {
   throw new Error('Missing VITE_FIREBASE_PROJECT_ID in environment.');
-  
 }
-// Additional checks for other required config fields can be added here as needed.
+
 const app = initializeApp(firebaseConfig);
 
 /** Shared Firebase Auth instance */
