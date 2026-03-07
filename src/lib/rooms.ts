@@ -166,8 +166,6 @@ export function subscribeToMessages(roomId: string, onMessage: (msg: RoomMessage
         onMessage(docToMessage(change.doc.id, change.doc.data()));
       }
     });
-  }, (error) => {
-    console.error('[rooms] subscribeToMessages error:', error);
   });
   return unsub;
 }
@@ -186,8 +184,6 @@ export function subscribeToSignals(roomId: string, currentUserId: string, onSign
         onSignal(signal);
       }
     });
-  }, (error) => {
-    console.error('[rooms] subscribeToSignals error:', error);
   });
   return unsub;
 }
@@ -196,8 +192,6 @@ export function subscribeToParticipants(roomId: string, onChange: (participants:
   const q = query(collection(db, 'room_participants'), where('room_id', '==', roomId));
   const unsub = onSnapshot(q, (snapshot) => {
     onChange(snapshot.docs.map(d => docToParticipant(d.id, d.data())));
-  }, (error) => {
-    console.error('[rooms] subscribeToParticipants error:', error);
   });
   return unsub;
 }
