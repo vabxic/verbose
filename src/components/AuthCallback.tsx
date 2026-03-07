@@ -1,12 +1,40 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Firebase Auth handles state via onAuthStateChanged — just redirect home.
-    navigate('/', { replace: true });
+    const handleAuthCallback = async () => {
+      try {
+        // exchangeCodeForSession handles the PKCE redirect flow,
+        // extracting the code from the URL hash/query automatically.
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        const code = queryParams.get('code') || hashParams.get('code');
+
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error('Auth callback error:', error);
+          } else {
+            console.log('Auth callback succeeded:', data);
+          }
+        } else {
+          // No code found – try getSession as fallback (implicit flow)
+          const { error } = await supabase.auth.getSession();
+          if (error) console.error('Auth callback error:', error);
+        }
+      } catch (error) {
+        console.error('Error handling auth callback:', error);
+      } finally {
+        // Redirect to home page after processing
+        navigate('/', { replace: true });
+      }
+    };
+
+    handleAuthCallback();
   }, [navigate]);
 
   return (
