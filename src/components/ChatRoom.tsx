@@ -957,17 +957,26 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ room, onLeave }) => {
               onClick={toggleVideo}
               title={videoEnabled ? 'Camera off' : 'Camera on'}
             >
-              {videoEnabled ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="23 7 16 12 23 17 23 7" />
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-              )}
+              <svg
+                viewBox="0 0 24 24"
+                role="img"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-labelledby="rotateIconTitle"
+                stroke="currentColor"
+                strokeWidth={1}
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+                fill="none"
+                color="currentColor"
+              >
+                <title id="rotateIconTitle">Rotate</title>
+                <path d="M22 12l-3 3-3-3"></path>
+                <path d="M2 12l3-3 3 3"></path>
+                <path d="M19.016 14v-1.95A7.05 7.05 0 0 0 8 6.22"></path>
+                <path d="M16.016 17.845A7.05 7.05 0 0 1 5 12.015V10"></path>
+                <path strokeLinecap="round" d="M5 10V9"></path>
+                <path strokeLinecap="round" d="M19 15v-1"></path>
+              </svg>
             </button>
 
             <button
