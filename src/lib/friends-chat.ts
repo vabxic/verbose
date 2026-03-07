@@ -59,7 +59,6 @@ function toISO(val: unknown): string {
 
 export async function setOnline(userId: string): Promise<void> {
   try {
-    if (!rtdb) return;
     const presenceRef = rtdbRef(rtdb, 'presence/' + userId);
     await rtdbSet(presenceRef, { is_online: true, last_seen: rtdbServerTimestamp() });
     // When this client disconnects, mark offline
@@ -71,7 +70,6 @@ export async function setOnline(userId: string): Promise<void> {
 
 export async function setOffline(userId: string): Promise<void> {
   try {
-    if (!rtdb) return;
     const presenceRef = rtdbRef(rtdb, 'presence/' + userId);
     await rtdbSet(presenceRef, { is_online: false, last_seen: rtdbServerTimestamp() });
   } catch (err) {
@@ -81,14 +79,12 @@ export async function setOffline(userId: string): Promise<void> {
 
 export async function getPresence(userIds: string[]): Promise<UserPresence[]> {
   if (userIds.length === 0) return [];
-  if (!rtdb) return [];
-  const db_ = rtdb;
   const results: UserPresence[] = [];
   // Read each user's presence node from RTDB
   for (const uid of userIds) {
     try {
       const val = await new Promise<UserPresence | null>((resolve) => {
-        const presenceRef = rtdbRef(db_, 'presence/' + uid);
+        const presenceRef = rtdbRef(rtdb, 'presence/' + uid);
         onValue(presenceRef, (snap) => {
           if (snap.exists()) {
             const d = snap.val();
@@ -115,14 +111,12 @@ export function subscribeToPresence(
   onChange: (presence: UserPresence[]) => void,
 ) {
   if (userIds.length === 0) return () => {};
-  if (!rtdb) return () => {};
-  const db_ = rtdb;
 
   const unsubs: (() => void)[] = [];
   const state = new Map<string, UserPresence>();
 
   for (const uid of userIds) {
-    const presenceRef = rtdbRef(db_, 'presence/' + uid);
+    const presenceRef = rtdbRef(rtdb, 'presence/' + uid);
     const unsub = onValue(presenceRef, (snap) => {
       if (snap.exists()) {
         const d = snap.val();
