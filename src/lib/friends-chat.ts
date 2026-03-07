@@ -28,69 +28,38 @@ export interface UserPresence {
 
 // ── Presence ────────────────────────────────────
 
-// Track whether we've already warned about Supabase being unavailable so we
-// don't flood the console with repeated messages.
-let _supabaseUnavailableWarned = false;
-
-function isNetworkError(err: unknown): boolean {
-  if (!err) return false;
-  const msg = (err as { message?: string }).message ?? '';
-  return msg.includes('AbortError') || msg.includes('aborted') || msg.includes('fetch');
-}
-
 export async function setOnline(userId: string): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('user_presence')
-      .upsert(
-        { user_id: userId, is_online: true, last_seen: new Date().toISOString() },
-        { onConflict: 'user_id' },
-      );
-    if (error && !isNetworkError(error)) {
-      console.warn('[friends-chat] Failed to set online:', error);
-    } else if (error && !_supabaseUnavailableWarned) {
-      _supabaseUnavailableWarned = true;
-      console.warn('[friends-chat] Supabase unavailable – presence updates paused.');
-    }
-  } catch {
-    // Silently ignore network failures
-  }
+  const { error } = await supabase
+    .from('user_presence')
+    .upsert(
+      { user_id: userId, is_online: true, last_seen: new Date().toISOString() },
+      { onConflict: 'user_id' },
+    );
+  if (error) console.warn('[friends-chat] Failed to set online:', error);
 }
 
 export async function setOffline(userId: string): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('user_presence')
-      .upsert(
-        { user_id: userId, is_online: false, last_seen: new Date().toISOString() },
-        { onConflict: 'user_id' },
-      );
-    if (error && !isNetworkError(error)) {
-      console.warn('[friends-chat] Failed to set offline:', error);
-    }
-  } catch {
-    // Silently ignore network failures
-  }
+  const { error } = await supabase
+    .from('user_presence')
+    .upsert(
+      { user_id: userId, is_online: false, last_seen: new Date().toISOString() },
+      { onConflict: 'user_id' },
+    );
+  if (error) console.warn('[friends-chat] Failed to set offline:', error);
 }
 
 export async function getPresence(userIds: string[]): Promise<UserPresence[]> {
   if (userIds.length === 0) return [];
-  try {
-    const { data, error } = await supabase
-      .from('user_presence')
-      .select('*')
-      .in('user_id', userIds);
+  const { data, error } = await supabase
+    .from('user_presence')
+    .select('*')
+    .in('user_id', userIds);
 
-    if (error) {
-      if (!isNetworkError(error)) {
-        console.warn('[friends-chat] Failed to get presence:', error);
-      }
-      return [];
-    }
-    return (data ?? []) as UserPresence[];
-  } catch {
+  if (error) {
+    console.warn('[friends-chat] Failed to get presence:', error);
     return [];
   }
+  return (data ?? []) as UserPresence[];
 }
 
 export function subscribeToPresence(

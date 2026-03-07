@@ -1,14 +1,6 @@
 import { supabase } from './supabase';
 import type { Room } from './rooms';
 
-// Helper to detect network/timeout errors (Supabase unavailable)
-function isNetworkError(err: unknown): boolean {
-  if (!err) return false;
-  const msg = (err as { message?: string }).message ?? '';
-  const name = (err as { name?: string }).name ?? '';
-  return name === 'AbortError' || msg.includes('aborted') || msg.includes('fetch');
-}
-
 // ── Types ───────────────────────────────────────
 
 export interface SavedRoom {
@@ -57,26 +49,14 @@ export async function unsaveRoom(userId: string, roomId: string): Promise<void> 
 }
 
 export async function getSavedRooms(userId: string): Promise<(SavedRoom & { room: Room })[]> {
-  try {
-    const { data, error } = await supabase
-      .from('saved_rooms')
-      .select('*, room:rooms(*)')
-      .eq('user_id', userId)
-      .order('saved_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('saved_rooms')
+    .select('*, room:rooms(*)')
+    .eq('user_id', userId)
+    .order('saved_at', { ascending: false });
 
-    if (error) {
-      // Network/timeout errors – fail silently
-      if (error.message?.includes('AbortError') || error.message?.includes('fetch')) return [];
-      throw error;
-    }
-    return (data ?? []) as (SavedRoom & { room: Room })[];
-  } catch (err: unknown) {
-    // Abort/network errors – return empty instead of crashing
-    if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('aborted'))) {
-      return [];
-    }
-    throw err;
-  }
+  if (error) throw error;
+  return (data ?? []) as (SavedRoom & { room: Room })[];
 }
 
 export async function isRoomSaved(userId: string, roomId: string): Promise<boolean> {
@@ -173,63 +153,39 @@ export async function deleteFriendRequest(requestId: string): Promise<void> {
 }
 
 export async function getIncomingFriendRequests(userId: string): Promise<FriendRequest[]> {
-  try {
-    const { data, error } = await supabase
-      .from('friend_requests')
-      .select('*')
-      .eq('receiver_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select('*')
+    .eq('receiver_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
 
-    if (error) {
-      if (isNetworkError(error)) return [];
-      throw error;
-    }
-    return (data ?? []) as FriendRequest[];
-  } catch (err) {
-    if (isNetworkError(err)) return [];
-    throw err;
-  }
+  if (error) throw error;
+  return (data ?? []) as FriendRequest[];
 }
 
 export async function getOutgoingFriendRequests(userId: string): Promise<FriendRequest[]> {
-  try {
-    const { data, error } = await supabase
-      .from('friend_requests')
-      .select('*')
-      .eq('sender_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select('*')
+    .eq('sender_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
 
-    if (error) {
-      if (isNetworkError(error)) return [];
-      throw error;
-    }
-    return (data ?? []) as FriendRequest[];
-  } catch (err) {
-    if (isNetworkError(err)) return [];
-    throw err;
-  }
+  if (error) throw error;
+  return (data ?? []) as FriendRequest[];
 }
 
 export async function getFriends(userId: string): Promise<FriendRequest[]> {
-  try {
-    const { data, error } = await supabase
-      .from('friend_requests')
-      .select('*')
-      .eq('status', 'accepted')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order('updated_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('friend_requests')
+    .select('*')
+    .eq('status', 'accepted')
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .order('updated_at', { ascending: false });
 
-    if (error) {
-      if (isNetworkError(error)) return [];
-      throw error;
-    }
-    return (data ?? []) as FriendRequest[];
-  } catch (err) {
-    if (isNetworkError(err)) return [];
-    throw err;
-  }
+  if (error) throw error;
+  return (data ?? []) as FriendRequest[];
 }
 
 export async function getPendingRequestCount(userId: string): Promise<number> {
