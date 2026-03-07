@@ -9,12 +9,6 @@ export default defineConfig({
     port: 5173,
     strictPort: false,
     cors: true,
-    headers: {
-      // Allow popups (Google OAuth, etc.) to communicate back via postMessage
-      // without triggering COOP "window.closed" warnings.
-      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
-      "Cross-Origin-Embedder-Policy": "unsafe-none",
-    },
   },
   build: {
     outDir: "dist",

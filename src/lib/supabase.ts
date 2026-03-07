@@ -10,34 +10,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 export const supabase = createClient(
   SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  {
-    // Auth is handled by Firebase – disabling Supabase auth avoids the
-    // Cross-Origin-Opener-Policy warning caused by its popup-closed check.
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-    // Give realtime a generous timeout and let it reconnect automatically.
-    realtime: {
-      timeout: 30000,
-      params: {
-        eventsPerSecond: 10,
-      },
-    },
-    global: {
-      // Add a 20-second fetch timeout so hung requests fail fast instead of
-      // accumulating and flooding the console.
-      fetch: (input: RequestInfo | URL, init?: RequestInit) => {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 20000);
-        return fetch(input, { ...init, signal: controller.signal }).finally(() =>
-          clearTimeout(id),
-        );
-      },
-    },
-  },
+  SUPABASE_ANON_KEY
 );
 
 // Database types for user profiles
