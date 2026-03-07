@@ -109,6 +109,7 @@ const StyledButton = styled.button`
   }
 `;
 
+
 /* Rotating SVG icon with scroll-based parallax offset */
 function FloatingIcon({
   children,
@@ -371,6 +372,7 @@ function App() {
   // ── Landing page with spring scroll + sidebar ──
   return (
     <div className="w-full min-h-screen relative" style={{ background: '#000000', overflow: 'hidden' }}>
+      
       {/* Background: animated stars + optional SplashCursor */}
       <div className="fixed inset-0 w-full h-screen" style={{ zIndex: 0 }}>
         <StarsBackground className="w-full h-full" speed={80} starColor="#ffffff" />
