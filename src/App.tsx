@@ -14,12 +14,14 @@ import CloudStorageDemo from "./components/CloudStorageDemo";
 const LoginPage = lazy(() => import("./components/LoginPage"));
 const HomePage = lazy(() => import("./components/HomePage"));
 import ProfileAvatar from "./components/ProfileAvatar";
+import RealtimeTrafficStats from "./components/RealtimeTrafficStats";
 import { useAuth } from "./providers/auth";
 
 const LANDING_SECTIONS = [
   { id: "hero", label: "Home" },
   { id: "features", label: "Features" },
   { id: "anonymous", label: "Anonymous" },
+  { id: "traffic", label: "Traffic" },
   { id: "start", label: "Get Started" },
 ];
 
@@ -557,6 +559,9 @@ function App() {
         </section>
 
         {/* Contact section removed per request */}
+
+        {/* ── Realtime Traffic Stats ── */}
+        <RealtimeTrafficStats />
 
         {/* ── Footer ── */}
         <SlideInRightSection>
